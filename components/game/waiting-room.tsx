@@ -122,7 +122,7 @@ function HostLobby() {
                     {role.label}
                   </div>
                   <div className="text-xs mt-0.5 text-muted-foreground">
-                    {filled ? "Da co nguoi" : "Con trong"}
+                    {filled ? "Đã có người" : "Còn trống"}
                   </div>
                 </div>
               );
@@ -133,8 +133,8 @@ function HostLobby() {
         {/* Available roles hint */}
         {availableRoles.length > 0 && (
           <div className="p-4 rounded-xl bg-secondary/50 border border-border text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Con {availableRoles.length} vai chua co nguoi:</strong>{" "}
-            {availableRoles.map((r) => r.label).join(", ")}. Moi them nguoi choi de day du.
+            <strong className="text-foreground">Còn {availableRoles.length} vai chưa có người:</strong>{" "}
+            {availableRoles.map((r) => r.label).join(", ")}. Mời thêm người chơi để đầy đủ.
           </div>
         )}
       </div>
@@ -148,8 +148,8 @@ function HostLobby() {
             onClick={startGame}
           >
             {canStart
-              ? `Bat dau game (${playersWithRole.length}/${state.players.length} da chon vai)`
-              : "Cho it nhat 1 nguoi chon vai..."}
+              ? `Bắt đầu game (${playersWithRole.length}/${state.players.length} đã chọn vai)`
+              : "Chờ ít nhất 1 người chọn vai..."}
           </Button>
         </div>
       </div>
@@ -176,7 +176,7 @@ function GuestLobby() {
         <div className="flex items-center justify-between max-w-2xl mx-auto w-full">
           <div>
             <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-0.5">
-              Phong
+              Phòng
             </div>
             <div className="text-2xl font-mono font-extrabold text-primary tracking-widest">
               {state.roomCode}
@@ -186,7 +186,7 @@ function GuestLobby() {
             onClick={restartGame}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Thoat
+            Thoát
           </button>
         </div>
       </header>
@@ -194,9 +194,9 @@ function GuestLobby() {
       <div className="flex-1 overflow-y-auto px-6 py-6 max-w-2xl mx-auto w-full space-y-6">
         {/* Role selection */}
         <div>
-          <h2 className="font-bold text-base mb-1">Chon vai tro cua ban</h2>
+          <h2 className="font-bold text-base mb-1">Chọn vai trò của bạn</h2>
           <p className="text-muted-foreground text-sm mb-4">
-            Moi vai co <strong className="text-foreground">goc nhin va muc tieu rieng</strong> trong tung tinh huong. Chon vai phu hop de gianh diem cao nhat.
+            Mỗi vai có <strong className="text-foreground">góc nhìn và mục tiêu riêng</strong> trong từng tình huống. Chọn vai phù hợp để giành điểm cao nhất.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {ROLES.map((role) => {
@@ -227,8 +227,8 @@ function GuestLobby() {
                     </div>
                     <div>
                       <div className="font-bold text-sm" style={{ color: role.color }}>{role.label}</div>
-                      {taken && <div className="text-xs text-muted-foreground">Da co nguoi chon</div>}
-                      {selected && <div className="text-xs font-medium" style={{ color: role.color }}>Vai cua ban</div>}
+                      {taken && <div className="text-xs text-muted-foreground">Đã có người chọn</div>}
+                      {selected && <div className="text-xs font-medium" style={{ color: role.color }}>Vai của bạn</div>}
                     </div>
                     {selected && (
                       <span className="ml-auto text-lg shrink-0" style={{ color: role.color }} aria-hidden="true">✓</span>
@@ -241,7 +241,7 @@ function GuestLobby() {
                     className="rounded-xl px-3 py-2 border text-xs leading-relaxed"
                     style={{ borderColor: `${role.color}40`, background: `${role.color}0a`, color: role.color }}
                   >
-                    <span className="font-bold">Muc tieu: </span>{role.goal}
+                    <span className="font-bold">Mục tiêu: </span>{role.goal}
                   </div>
                 </button>
               );
@@ -252,7 +252,7 @@ function GuestLobby() {
         {/* Other players */}
         <div>
           <h3 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
-            Nguoi trong phong ({state.players.length})
+            Người trong phòng ({state.players.length})
           </h3>
           <div className="space-y-2">
             {state.players.map((player) => (
@@ -277,14 +277,14 @@ function GuestLobby() {
                   <div className="text-sm font-medium">
                     {player.name}
                     {player.id === myId && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">(ban)</span>
+                      <span className="ml-1.5 text-xs text-muted-foreground">(bạn)</span>
                     )}
                   </div>
                 </div>
                 {player.role ? (
                   <RoleBadge roleId={player.role} size="sm" />
                 ) : (
-                  <span className="text-xs text-muted-foreground italic">Chua chon vai</span>
+                  <span className="text-xs text-muted-foreground italic">Chưa chọn vai</span>
                 )}
               </div>
             ))}
@@ -298,11 +298,11 @@ function GuestLobby() {
           {currentPlayer?.role ? (
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
               <span className="w-2 h-2 rounded-full bg-indicator-equity animate-pulse" />
-              Da chon vai — Cho host bat dau game...
+              Đã chọn vai — Chờ host bắt đầu game...
             </div>
           ) : (
             <div className="text-center text-sm text-accent font-medium py-2 animate-pulse">
-              Hay chon vai tro de tham gia game
+              Hãy chọn vai trò để tham gia game
             </div>
           )}
         </div>

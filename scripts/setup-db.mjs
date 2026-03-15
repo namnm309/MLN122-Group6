@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const FALLBACK_SUPABASE_URL = 'https://zbbblggjvgsixnwpesei.supabase.co';
+const FALLBACK_SUPABASE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiYmJsZ2dqdmdzaXhud3Blc2VpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjAxODUsImV4cCI6MjA4OTAzNjE4NX0.yMY7g_-qrGar2QAAW817ygvtHWqHRqtyDI7fU-GKsLQ';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('Missing Supabase credentials');
-  process.exit(1);
-}
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 

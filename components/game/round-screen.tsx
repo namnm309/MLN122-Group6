@@ -44,10 +44,10 @@ function HostRoundDashboard() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/30">
-                Vong {state.currentRound} / {GAME_ROUNDS.length}
+                Vòng {state.currentRound} / {GAME_ROUNDS.length}
               </span>
               <span className="text-xs bg-secondary text-muted-foreground px-2 py-0.5 rounded-full border border-border font-medium">
-                HOST — Quan sat
+                HOST — Quan sát
               </span>
             </div>
             <div
@@ -85,10 +85,10 @@ function HostRoundDashboard() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
-              Phieu bau thoi gian thuc
+              Phiếu bầu thời gian thực
             </h3>
             <span className="text-xs font-mono text-muted-foreground">
-              {votedCount}/{totalCount} da vote
+              {votedCount}/{totalCount} đã vote
             </span>
           </div>
           <div className="space-y-3">
@@ -112,7 +112,7 @@ function HostRoundDashboard() {
                       {option.text}
                     </span>
                     <span className={cn("text-sm font-mono font-bold shrink-0", isLeading ? "text-primary" : "text-muted-foreground")}>
-                      {tally.count} phieu
+                      {tally.count} phiếu
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-secondary overflow-hidden">
@@ -150,7 +150,7 @@ function HostRoundDashboard() {
         {/* Player vote status */}
         <div>
           <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-3">
-            Trang thai nguoi choi
+            Trạng thái người chơi
           </h3>
           <div className="grid grid-cols-2 gap-2">
             {state.players.map((player) => {
@@ -180,7 +180,7 @@ function HostRoundDashboard() {
                     "text-xs font-medium shrink-0",
                     hasVoted ? "text-indicator-equity" : "text-muted-foreground"
                   )}>
-                    {hasVoted ? "Da vote" : "Chua..."}
+                    {hasVoted ? "Đã vote" : "Chưa..."}
                   </div>
                 </div>
               );
@@ -216,7 +216,7 @@ function GuestRoundScreen() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/30">
-                Vong {state.currentRound} / {GAME_ROUNDS.length}
+                Vòng {state.currentRound} / {GAME_ROUNDS.length}
               </span>
               {currentPlayer?.role && (
                 <RoleBadge roleId={currentPlayer.role} size="sm" />
@@ -270,7 +270,7 @@ function GuestRoundScreen() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-base" aria-hidden="true">{roleInfo?.icon}</span>
                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: roleInfo?.color }}>
-                  Goc nhin cua ban — {roleInfo?.label}
+                  Góc nhìn của bạn — {roleInfo?.label}
                 </span>
               </div>
               <p className="text-sm leading-relaxed text-foreground">{privateInfo}</p>
@@ -322,13 +322,13 @@ function GuestRoundScreen() {
       {/* Bottom status */}
       <div className="border-t border-border px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between text-sm">
-          <div className="text-muted-foreground">{votedCount}/{totalCount} da vote</div>
+          <div className="text-muted-foreground">{votedCount}/{totalCount} đã vote</div>
           {myVote ? (
             <div className="text-indicator-equity font-medium">
-              Da chon {String.fromCharCode(65 + Number(myVote))} — Cho ket qua...
+              Đã chọn {String.fromCharCode(65 + Number(myVote))} — Chờ kết quả...
             </div>
           ) : (
-            <div className="text-muted-foreground animate-pulse">Dang cho ban vote...</div>
+            <div className="text-muted-foreground animate-pulse">Đang chờ bạn vote...</div>
           )}
         </div>
         <div className="max-w-2xl mx-auto flex gap-1.5 mt-2">
@@ -338,7 +338,7 @@ function GuestRoundScreen() {
             return (
               <div
                 key={p.id}
-                title={`${p.name}${hasVoted ? " (da vote)" : ""}`}
+                title={`${p.name}${hasVoted ? " (đã vote)" : ""}`}
                 className={cn(
                   "flex-1 h-1.5 rounded-full transition-all duration-300",
                   hasVoted

@@ -17,6 +17,11 @@ interface RoomListing {
   player_count: number;
 }
 
+const GUIDE_GIF_URL =
+  "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExamh0dG50ZjY0NDRuNHVuMGh2ajNyczJldW82MjdnZnh3YzF0aGlxOSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/rZjsvCDqSM7jzH2HHS/giphy.gif";
+const HOWTO_FOOTER_GIF_URL =
+  "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3F2OGtrcWdlaDhld3oyNHE2emo3c3V1aGozeXU2cW1mMzhvbzI1MCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/O74VEiwlTpmuXH1vFW/giphy.gif";
+
 export function HomeScreen() {
   const [screen, setScreen] = useState<Screen>("home");
   const { createRoom, joinRoom, dbReady } = useGame();
@@ -133,15 +138,41 @@ export function HomeScreen() {
         <div className="flex-1 overflow-y-auto px-6 py-8 max-w-2xl mx-auto w-full">
           <h2 className="text-2xl font-bold mb-2 text-balance">Hướng dẫn chơi</h2>
           <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-            Game ra quyết định tập thể về kinh tế thị trường định hướng xã hội chủ nghĩa.
+            Đây là game mô phỏng ra quyết định tập thể trong kinh tế thị trường định hướng xã hội chủ nghĩa.
+            Mỗi quyết định của nhóm sẽ tác động trực tiếp đến 3 chỉ số chung và điểm của từng vai.
           </p>
           <div className="space-y-6">
             {[
-              { step: "01", title: "Host tạo phòng", desc: "Host tạo phòng với tên riêng và chia sẻ mã phòng (CBLI-XXX) cho người chơi." },
-              { step: "02", title: "Người chơi tham gia", desc: "Chọn phòng từ danh sách đang mở, hoặc nhập thẳng mã phòng." },
-              { step: "03", title: "Chọn vai trò", desc: "Mỗi người chọn 1 trong 4 vai: Nhà nước, Doanh nghiệp, Người lao động, hoặc Người dân." },
-              { step: "04", title: "Đọc tình huống & bỏ phiếu", desc: "Game có 5 vòng. Mỗi vòng trình bày tình huống kinh tế thực tế. Tất cả vote trong 30 giây." },
-              { step: "05", title: "Xem kết quả & nhận kết thúc", desc: "Sau 5 vòng, hệ thống phân tích tổng chỉ số và trả về một trong 4 kết thúc có thể." },
+              {
+                step: "01",
+                title: "Host tạo phòng và chia sẻ mã",
+                desc: "Host nhập tên, tạo phòng, rồi gửi mã phòng cho mọi người. Người chơi có thể vào từ danh sách phòng đang mở hoặc nhập trực tiếp mã phòng.",
+              },
+              {
+                step: "02",
+                title: "Người chơi chọn vai trước khi bắt đầu",
+                desc: "Mỗi người chọn một vai phù hợp góc nhìn của mình. Khi đã chọn vai, người chơi chờ host bấm bắt đầu game.",
+              },
+              {
+                step: "03",
+                title: "Mỗi vòng gồm bối cảnh + phương án",
+                desc: "Game có 5 vòng. Mỗi vòng đưa ra một tình huống kinh tế thực tế, kèm 4 phương án quyết định (A/B/C/D).",
+              },
+              {
+                step: "04",
+                title: "Bỏ phiếu trong 30 giây",
+                desc: "Người chơi bỏ 1 phiếu duy nhất trong 30 giây. Có thể theo dõi số người đã vote theo thời gian thực. Hết giờ hệ thống tự chốt kết quả theo các phiếu hiện có.",
+              },
+              {
+                step: "05",
+                title: "Nhận kết quả vòng và cập nhật chỉ số",
+                desc: "Phương án thắng sẽ làm thay đổi 3 chỉ số chung: Tăng trưởng, Công bằng, Ổn định. Đồng thời mỗi vai nhận điểm lợi ích khác nhau theo phương án vừa thắng.",
+              },
+              {
+                step: "06",
+                title: "Kết thúc sau 5 vòng",
+                desc: "Cuối game, hệ thống tổng hợp điểm vai trò và mức cân bằng 3 chỉ số để trả về kết cục tổng thể của nền kinh tế.",
+              },
             ].map((item) => (
               <div key={item.step} className="flex gap-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-mono text-sm font-bold shrink-0">
@@ -153,6 +184,15 @@ export function HomeScreen() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8 p-4 rounded-xl border border-border bg-card">
+            <h3 className="font-bold text-sm mb-2">Lưu ý quan trọng</h3>
+            <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
+              <div>• Mỗi vòng chỉ chọn được 1 phương án, đã chọn là không đổi trong vòng đó.</div>
+              <div>• Nếu bạn chưa vote và hết giờ, hệ thống vẫn xử lý vòng dựa trên các phiếu đã có.</div>
+              <div>• Mục tiêu của từng vai khác nhau, vì vậy tranh luận trước khi vote là phần cốt lõi của game.</div>
+            </div>
           </div>
 
           <div className="mt-10">
@@ -188,8 +228,16 @@ export function HomeScreen() {
             </div>
           </div>
         </div>
-        <div className="p-6 border-t border-border">
-          <Button className="w-full" onClick={() => setScreen("home")}>Hiểu rồi, bắt đầu thôi!</Button>
+        <div className="p-6">
+          <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
+            <img
+              src={HOWTO_FOOTER_GIF_URL}
+              alt="Bắt đầu"
+              className="w-28 h-28 sm:w-32 sm:h-32 object-contain"
+              loading="lazy"
+            />
+            <Button className="w-full" onClick={() => setScreen("home")}>Hiểu rồi, bắt đầu thôi!</Button>
+          </div>
         </div>
       </div>
     );
@@ -396,7 +444,52 @@ export function HomeScreen() {
   // Main home
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
+        <>
+          <button
+            type="button"
+            onClick={() => setScreen("howto")}
+            className="fixed left-5 bottom-5 sm:left-7 sm:bottom-7 z-50 w-[300px] sm:w-[360px] flex items-center justify-between gap-2 transition-transform hover:scale-105 active:scale-95"
+            aria-label="Mở hướng dẫn bên trái"
+            title="Hướng dẫn"
+          >
+            <img
+              src={GUIDE_GIF_URL}
+              alt="Hướng dẫn"
+              className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
+              style={{ transform: "scaleX(-1)" }}
+              loading="lazy"
+            />
+            <span
+              className="text-sm sm:text-base font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
+              style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
+            >
+              HƯỚNG DẪN CHƠI !!!
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScreen("howto")}
+            className="fixed right-5 bottom-5 sm:right-7 sm:bottom-7 z-50 w-[300px] sm:w-[360px] flex items-center justify-between gap-2 transition-transform hover:scale-105 active:scale-95"
+            aria-label="Mở hướng dẫn bên phải"
+            title="Hướng dẫn"
+          >
+            <span
+              className="text-sm sm:text-base font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
+              style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
+            >
+              HƯỚNG DẪN CHƠI !!!
+            </span>
+            <img
+              src={GUIDE_GIF_URL}
+              alt="Hướng dẫn"
+              className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
+              loading="lazy"
+            />
+          </button>
+        </>
+
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-medium mb-4">
           <span
             className={cn("w-1.5 h-1.5 rounded-full", dbReady ? "bg-indicator-equity animate-pulse" : "bg-muted-foreground")}
@@ -438,12 +531,6 @@ export function HomeScreen() {
           >
             Tham gia phòng
           </Button>
-          <button
-            onClick={() => setScreen("howto")}
-            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-          >
-            Hướng dẫn chơi
-          </button>
         </div>
       </div>
 
@@ -461,6 +548,26 @@ export function HomeScreen() {
           ))}
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes guideTextRainbow {
+          0% {
+            color: hsl(var(--foreground));
+          }
+          25% {
+            color: hsl(var(--primary));
+          }
+          50% {
+            color: #4a8fe8;
+          }
+          75% {
+            color: #e8943a;
+          }
+          100% {
+            color: hsl(var(--foreground));
+          }
+        }
+      `}</style>
     </div>
   );
 }

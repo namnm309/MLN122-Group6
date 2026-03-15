@@ -267,7 +267,7 @@ export function FinalScreen() {
                 <div className="text-xs text-muted-foreground mt-0.5 leading-snug">{e.subtitle}</div>
                 {e.id === ending.id && (
                   <div className="mt-1.5 text-xs font-bold" style={{ color: e.color }}>
-                    Kết thúc của nhóm ban
+                    Kết thúc của nhóm bạn
                   </div>
                 )}
               </div>
@@ -278,7 +278,7 @@ export function FinalScreen() {
         {/* Learning note */}
         <div className="p-4 rounded-2xl border border-dashed border-border">
           <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-            Bai hoc rut ra
+            Bài học rút ra
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Trong nền kinh tế thị trường định hướng xã hội chủ nghĩa, cần phải{" "}
@@ -293,7 +293,7 @@ export function FinalScreen() {
       <div className="p-4 border-t border-border">
         <div className="max-w-2xl mx-auto">
           <Button className="w-full h-12 text-base font-semibold" onClick={restartGame}>
-            Choi lai tu dau
+            Chơi lại từ đầu
           </Button>
         </div>
       </div>
