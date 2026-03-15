@@ -545,7 +545,7 @@ export function HomeScreen() {
               HƯỚNG DẪN CHƠI !!!
             </span>
             <video
-              className="w-28 h-28 object-contain"
+              className="w-28 h-28 object-contain mix-blend-multiply"
               autoPlay
               loop
               muted
