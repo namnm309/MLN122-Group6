@@ -471,7 +471,7 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => setScreen("howto")}
-            className="fixed right-5 bottom-5 sm:right-7 sm:bottom-7 z-50 w-[300px] sm:w-[360px] flex items-center justify-between gap-2 transition-transform hover:scale-105 active:scale-95"
+            className="fixed right-5 bottom-5 sm:right-7 sm:bottom-7 z-50 w-[300px] sm:w-[360px] hidden sm:flex items-center justify-between gap-2 transition-transform hover:scale-105 active:scale-95"
             aria-label="Mở hướng dẫn bên phải"
             title="Hướng dẫn"
           >
@@ -531,6 +531,27 @@ export function HomeScreen() {
           >
             Tham gia phòng
           </Button>
+
+          <button
+            type="button"
+            onClick={() => setScreen("howto")}
+            className="sm:hidden w-full pt-2 flex flex-col items-center gap-2"
+            aria-label="Mở hướng dẫn"
+            title="Hướng dẫn"
+          >
+            <span
+              className="text-sm font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
+              style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
+            >
+              HƯỚNG DẪN CHƠI !!!
+            </span>
+            <img
+              src={GUIDE_GIF_URL}
+              alt="Hướng dẫn"
+              className="w-28 h-28 object-contain transform-gpu"
+              loading="eager"
+            />
+          </button>
         </div>
       </div>
 
