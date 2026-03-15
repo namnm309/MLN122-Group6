@@ -15,6 +15,7 @@ import {
   RoleId,
   Indicators,
   GAME_ROUNDS,
+  ROLES,
   generateRoomCode,
 } from "./game-data";
 import { supabase } from "./supabase";
@@ -368,6 +369,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!state.roomCode || !dbReady) return;
 
     try {
+      const { data: playersData, error: playersError } = await supabase
+        .from("players")
+        .select("id")
+        .eq("room_id", state.roomCode)
+        .order("joined_at", { ascending: true });
+
+      if (playersError) throw playersError;
+      if (!playersData || playersData.length === 0) return;
+
+      const shuffledPlayers = [...playersData].sort(() => Math.random() - 0.5);
+      const shuffledRoles = ROLES.map((r) => r.id as RoleId).sort(() => Math.random() - 0.5);
+
+      const assignments = shuffledPlayers.map((player, index) => ({
+        playerId: player.id,
+        role: shuffledRoles[index % shuffledRoles.length],
+      }));
+
+      const roleUpdates = await Promise.all(
+        assignments.map((assignment) =>
+          supabase
+            .from("players")
+            .update({ role: assignment.role })
+            .eq("id", assignment.playerId)
+        )
+      );
+
+      const roleUpdateError = roleUpdates.find((result) => result.error)?.error;
+      if (roleUpdateError) throw roleUpdateError;
+
       // Update rooms table — the subscription will trigger phase transition for ALL guests
       const { error: roomError } = await supabase
         .from("rooms")
@@ -382,9 +412,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         .update({ current_round: 1 })
         .eq("room_id", state.roomCode);
 
+      const roleByPlayerId = new Map(assignments.map((assignment) => [assignment.playerId, assignment.role]));
+
       // Host transitions immediately without waiting for its own subscription event
       setState((prev) => ({
         ...prev,
+        players: prev.players.map((player) => ({
+          ...player,
+          role: (roleByPlayerId.get(player.id) ?? player.role) as RoleId | null,
+        })),
         phase: "round",
         currentRound: 1,
         indicators: { ...defaultIndicators },

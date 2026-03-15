@@ -1,8 +1,8 @@
 "use client";
 
 import { useGame } from "@/lib/game-context";
-import { ROLES, RoleId } from "@/lib/game-data";
-import { RoleCard, RoleBadge } from "./role-badge";
+import { ROLES } from "@/lib/game-data";
+import { RoleBadge } from "./role-badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,11 +11,7 @@ import { cn } from "@/lib/utils";
 // ------------------------------------------------------------------
 function HostLobby() {
   const { state, startGame, restartGame } = useGame();
-  const playersWithRole = state.players.filter((p) => p.role);
-  const canStart = state.players.length >= 1 && playersWithRole.length >= 1;
-
-  const takenRoles = state.players.filter((p) => p.role).map((p) => p.role as RoleId);
-  const availableRoles = ROLES.filter((r) => !takenRoles.includes(r.id));
+  const canStart = state.players.length >= 1;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -99,44 +95,9 @@ function HostLobby() {
           )}
         </div>
 
-        {/* Role coverage grid */}
-        <div>
-          <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-3">
-            Vai trò còn trống
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {ROLES.map((role) => {
-              const filled = takenRoles.includes(role.id);
-              return (
-                <div
-                  key={role.id}
-                  className={cn(
-                    "p-3 rounded-xl border text-center transition-all",
-                    filled
-                      ? cn("bg-card/50", role.borderClass)
-                      : "border-dashed border-border bg-transparent opacity-50"
-                  )}
-                >
-                  <div className="text-2xl mb-1">{role.icon}</div>
-                  <div className={cn("text-xs font-semibold", filled ? role.textClass : "text-muted-foreground")}>
-                    {role.label}
-                  </div>
-                  <div className="text-xs mt-0.5 text-muted-foreground">
-                    {filled ? "Đã có người" : "Còn trống"}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="p-4 rounded-xl bg-secondary/50 border border-border text-sm text-muted-foreground leading-relaxed">
+          Vai trò sẽ được hệ thống random tự động khi host bấm bắt đầu game.
         </div>
-
-        {/* Available roles hint */}
-        {availableRoles.length > 0 && (
-          <div className="p-4 rounded-xl bg-secondary/50 border border-border text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Còn {availableRoles.length} vai chưa có người:</strong>{" "}
-            {availableRoles.map((r) => r.label).join(", ")}. Mời thêm người chơi để đầy đủ.
-          </div>
-        )}
       </div>
 
       {/* Start button */}
@@ -148,8 +109,8 @@ function HostLobby() {
             onClick={startGame}
           >
             {canStart
-              ? `Bắt đầu game (${playersWithRole.length}/${state.players.length} đã chọn vai)`
-              : "Chờ ít nhất 1 người chọn vai..."}
+              ? `Bắt đầu game (${state.players.length} người chơi)`
+              : "Chờ ít nhất 1 người tham gia..."}
           </Button>
         </div>
       </div>
@@ -161,13 +122,9 @@ function HostLobby() {
 // Guest view: role selection + waiting for host to start
 // ------------------------------------------------------------------
 function GuestLobby() {
-  const { state, currentPlayerDbId, currentPlayerId, selectRole, restartGame } = useGame();
+  const { state, currentPlayerDbId, currentPlayerId, restartGame } = useGame();
 
   const myId = currentPlayerDbId || currentPlayerId;
-  const currentPlayer = state.players.find((p) => p.id === myId);
-  const takenRoles = state.players
-    .filter((p) => p.id !== myId && p.role)
-    .map((p) => p.role as RoleId);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -192,58 +149,24 @@ function GuestLobby() {
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-6 max-w-2xl mx-auto w-full space-y-6">
-        {/* Role selection */}
+        {/* Role assignment info */}
         <div>
-          <h2 className="font-bold text-base mb-1">Chọn vai trò của bạn</h2>
+          <h2 className="font-bold text-base mb-1">Vai trò sẽ được random</h2>
           <p className="text-muted-foreground text-sm mb-4">
-            Mỗi vai có <strong className="text-foreground">góc nhìn và mục tiêu riêng</strong> trong từng tình huống. Chọn vai phù hợp để giành điểm cao nhất.
+            Bạn không cần chọn vai. Khi host bấm bắt đầu game, hệ thống sẽ tự random vai cho tất cả người chơi.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {ROLES.map((role) => {
-              const taken = takenRoles.includes(role.id);
-              const selected = currentPlayer?.role === role.id;
               return (
-                <button
+                <div
                   key={role.id}
-                  onClick={() => !taken && selectRole(role.id)}
-                  disabled={taken}
-                  className={cn(
-                    "text-left p-4 rounded-2xl border-2 transition-all duration-200 w-full",
-                    selected
-                      ? `${role.borderClass} ${role.bgClass}`
-                      : taken
-                      ? "border-border bg-card opacity-40 cursor-not-allowed"
-                      : "border-border bg-card hover:border-opacity-60 active:scale-[0.99]",
-                  )}
-                  style={selected ? { borderColor: role.color, background: `${role.color}14` } : undefined}
-                  aria-pressed={selected}
+                  className={cn("p-3 rounded-xl border text-center", role.bgClass, role.borderClass)}
                 >
-                  <div className="flex items-center gap-2.5 mb-2.5">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                      style={{ background: `${role.color}22` }}
-                    >
-                      {role.icon}
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm" style={{ color: role.color }}>{role.label}</div>
-                      {taken && <div className="text-xs text-muted-foreground">Đã có người chọn</div>}
-                      {selected && <div className="text-xs font-medium" style={{ color: role.color }}>Vai của bạn</div>}
-                    </div>
-                    {selected && (
-                      <span className="ml-auto text-lg shrink-0" style={{ color: role.color }} aria-hidden="true">✓</span>
-                    )}
+                  <div className="text-2xl mb-1">{role.icon}</div>
+                  <div className={cn("text-xs font-semibold", role.textClass)}>
+                    {role.label}
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-                    {role.description}
-                  </p>
-                  <div
-                    className="rounded-xl px-3 py-2 border text-xs leading-relaxed"
-                    style={{ borderColor: `${role.color}40`, background: `${role.color}0a`, color: role.color }}
-                  >
-                    <span className="font-bold">Mục tiêu: </span>{role.goal}
-                  </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -295,16 +218,10 @@ function GuestLobby() {
       {/* Status footer */}
       <div className="p-6 border-t border-border">
         <div className="max-w-2xl mx-auto">
-          {currentPlayer?.role ? (
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
-              <span className="w-2 h-2 rounded-full bg-indicator-equity animate-pulse" />
-              Đã chọn vai — Chờ host bắt đầu game...
-            </div>
-          ) : (
-            <div className="text-center text-sm text-accent font-medium py-2 animate-pulse">
-              Hãy chọn vai trò để tham gia game
-            </div>
-          )}
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+            <span className="w-2 h-2 rounded-full bg-indicator-equity animate-pulse" />
+            Vai trò sẽ được random khi host bắt đầu game...
+          </div>
         </div>
       </div>
     </div>
