@@ -18,6 +18,7 @@ interface RoomListing {
 }
 
 const GUIDE_GIF_URL = "/Tom%20Screaming%20Sticker%20by%20Disney%20Pixar.gif";
+const GUIDE_MOBILE_GIF_URL = "/Animation%20Trend%20Sticker.gif";
 const HOWTO_FOOTER_GIF_URL = "/Animation%20Trend%20Sticker.gif";
 
 export function HomeScreen() {
@@ -544,7 +545,7 @@ export function HomeScreen() {
               HƯỚNG DẪN CHƠI !!!
             </span>
             <img
-              src={GUIDE_GIF_URL}
+              src={GUIDE_MOBILE_GIF_URL}
               alt="Hướng dẫn"
               className="w-28 h-28 object-contain"
               loading="eager"
