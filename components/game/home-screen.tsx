@@ -234,7 +234,7 @@ export function HomeScreen() {
               src={HOWTO_FOOTER_GIF_URL}
               alt="Bắt đầu"
               className="w-28 h-28 sm:w-32 sm:h-32 object-contain"
-              loading="lazy"
+              loading="eager"
             />
             <Button className="w-full" onClick={() => setScreen("home")}>Hiểu rồi, bắt đầu thôi!</Button>
           </div>
@@ -449,7 +449,7 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => setScreen("howto")}
-            className="fixed left-5 bottom-5 sm:left-7 sm:bottom-7 z-50 w-[300px] sm:w-[360px] flex items-center justify-between gap-2 transition-transform hover:scale-105 active:scale-95"
+            className="fixed left-5 bottom-5 sm:left-7 sm:bottom-7 z-50 w-[300px] sm:w-[360px] hidden sm:flex items-center justify-between gap-2 transition-transform hover:scale-105 active:scale-95"
             aria-label="Mở hướng dẫn bên trái"
             title="Hướng dẫn"
           >
@@ -458,7 +458,7 @@ export function HomeScreen() {
               alt="Hướng dẫn"
               className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
               style={{ transform: "scaleX(-1)" }}
-              loading="lazy"
+              loading="eager"
             />
             <span
               className="text-sm sm:text-base font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
@@ -485,7 +485,7 @@ export function HomeScreen() {
               src={GUIDE_GIF_URL}
               alt="Hướng dẫn"
               className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
-              loading="lazy"
+              loading="eager"
             />
           </button>
         </>
