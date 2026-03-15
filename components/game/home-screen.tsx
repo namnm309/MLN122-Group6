@@ -17,10 +17,8 @@ interface RoomListing {
   player_count: number;
 }
 
-const GUIDE_GIF_URL = "https://media.giphy.com/media/rZjsvCDqSM7jzH2HHS/giphy.gif";
-const GUIDE_WEBP_URL = "https://media.giphy.com/media/rZjsvCDqSM7jzH2HHS/giphy.webp";
-const HOWTO_FOOTER_GIF_URL =
-  "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3F2OGtrcWdlaDhld3oyNHE2emo3c3V1aGozeXU2cW1mMzhvbzI1MCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/O74VEiwlTpmuXH1vFW/giphy.gif";
+const GUIDE_GIF_URL = "/Tom%20Screaming%20Sticker%20by%20Disney%20Pixar.gif";
+const HOWTO_FOOTER_GIF_URL = "/Animation%20Trend%20Sticker.gif";
 
 export function HomeScreen() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -453,15 +451,13 @@ export function HomeScreen() {
             aria-label="Mở hướng dẫn bên trái"
             title="Hướng dẫn"
           >
-            <picture className="w-40 h-40 sm:w-48 sm:h-48" style={{ transform: "scaleX(-1)" }}>
-              <source srcSet={GUIDE_WEBP_URL} type="image/webp" />
-              <img
-                src={GUIDE_GIF_URL}
-                alt="Hướng dẫn"
-                className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
-                loading="eager"
-              />
-            </picture>
+            <img
+              src={GUIDE_GIF_URL}
+              alt="Hướng dẫn"
+              className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
+              style={{ transform: "scaleX(-1)" }}
+              loading="eager"
+            />
             <span
               className="text-sm sm:text-base font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
               style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
@@ -483,15 +479,12 @@ export function HomeScreen() {
             >
               HƯỚNG DẪN CHƠI !!!
             </span>
-            <picture className="w-40 h-40 sm:w-48 sm:h-48">
-              <source srcSet={GUIDE_WEBP_URL} type="image/webp" />
-              <img
-                src={GUIDE_GIF_URL}
-                alt="Hướng dẫn"
-                className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
-                loading="eager"
-              />
-            </picture>
+            <img
+              src={GUIDE_GIF_URL}
+              alt="Hướng dẫn"
+              className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
+              loading="eager"
+            />
           </button>
         </>
 
@@ -550,15 +543,12 @@ export function HomeScreen() {
             >
               HƯỚNG DẪN CHƠI !!!
             </span>
-            <picture className="w-28 h-28">
-              <source srcSet={GUIDE_WEBP_URL} type="image/webp" />
-              <img
-                src={GUIDE_GIF_URL}
-                alt="Hướng dẫn"
-                className="w-28 h-28 object-contain transform-gpu"
-                loading="eager"
-              />
-            </picture>
+            <img
+              src={GUIDE_GIF_URL}
+              alt="Hướng dẫn"
+              className="w-28 h-28 object-contain transform-gpu"
+              loading="eager"
+            />
           </button>
         </div>
       </div>
