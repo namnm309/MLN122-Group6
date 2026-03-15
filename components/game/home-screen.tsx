@@ -19,7 +19,7 @@ interface RoomListing {
 
 const GUIDE_GIF_URL =
   "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExamh0dG50ZjY0NDRuNHVuMGh2ajNyczJldW82MjdnZnh3YzF0aGlxOSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/rZjsvCDqSM7jzH2HHS/giphy.gif";
-const GUIDE_MP4_URL = "https://media.giphy.com/media/rZjsvCDqSM7jzH2HHS/giphy.mp4";
+const GUIDE_WEBP_URL = "https://media.giphy.com/media/rZjsvCDqSM7jzH2HHS/giphy.webp";
 const HOWTO_FOOTER_GIF_URL =
   "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3F2OGtrcWdlaDhld3oyNHE2emo3c3V1aGozeXU2cW1mMzhvbzI1MCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/O74VEiwlTpmuXH1vFW/giphy.gif";
 
@@ -454,19 +454,13 @@ export function HomeScreen() {
             aria-label="Mở hướng dẫn bên trái"
             title="Hướng dẫn"
           >
-            <video
+            <img
+              src={GUIDE_WEBP_URL}
+              alt="Hướng dẫn"
               className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
               style={{ transform: "scaleX(-1)" }}
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              poster={GUIDE_GIF_URL}
-              aria-label="Hướng dẫn"
-            >
-              <source src={GUIDE_MP4_URL} type="video/mp4" />
-            </video>
+              loading="eager"
+            />
             <span
               className="text-sm sm:text-base font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
               style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
@@ -488,18 +482,12 @@ export function HomeScreen() {
             >
               HƯỚNG DẪN CHƠI !!!
             </span>
-            <video
+            <img
+              src={GUIDE_WEBP_URL}
+              alt="Hướng dẫn"
               className="w-40 h-40 sm:w-48 sm:h-48 object-contain"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              poster={GUIDE_GIF_URL}
-              aria-label="Hướng dẫn"
-            >
-              <source src={GUIDE_MP4_URL} type="video/mp4" />
-            </video>
+              loading="eager"
+            />
           </button>
         </>
 
@@ -558,18 +546,12 @@ export function HomeScreen() {
             >
               HƯỚNG DẪN CHƠI !!!
             </span>
-            <video
+            <img
+              src={GUIDE_WEBP_URL}
+              alt="Hướng dẫn"
               className="w-28 h-28 object-contain transform-gpu"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              poster={GUIDE_GIF_URL}
-              aria-label="Hướng dẫn"
-            >
-              <source src={GUIDE_MP4_URL} type="video/mp4" />
-            </video>
+              loading="eager"
+            />
           </button>
         </div>
       </div>
