@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useGame } from "@/lib/game-context";
-import { ROLES } from "@/lib/game-data";
+import { GAME_INTRO, GLOBAL_ENDINGS, ROLES } from "@/lib/game-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -23,7 +24,17 @@ const HOWTO_FOOTER_GIF_URL = "/Animation%20Trend%20Sticker.gif";
 
 export function HomeScreen() {
   const [screen, setScreen] = useState<Screen>("home");
+  const [showTheory, setShowTheory] = useState(false);
   const { createRoom, joinRoom, dbReady } = useGame();
+
+  // Admin reset DB
+  const [showResetPanel, setShowResetPanel] = useState(false);
+  const [adminUser, setAdminUser] = useState("");
+  const [adminPass, setAdminPass] = useState("");
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetMessageType, setResetMessageType] = useState<"success" | "error" | "">("");
 
   // Create form
   const [hostName, setHostName] = useState("");
@@ -123,7 +134,62 @@ export function HomeScreen() {
     }
   };
 
+  const handleResetDb = async () => {
+    setResetMessage("");
+    setResetMessageType("");
+
+    if (!dbReady) {
+      setResetMessage("Database chưa sẵn sàng.");
+      setResetMessageType("error");
+      return;
+    }
+
+    if (adminUser.trim() !== "admin" || adminPass !== "mnam") {
+      setResetMessage("Sai tài khoản hoặc mật khẩu admin.");
+      setResetMessageType("error");
+      return;
+    }
+
+    if (resetConfirmText.trim().toUpperCase() !== "RESET") {
+      setResetMessage("Vui lòng nhập đúng chữ RESET để xác nhận.");
+      setResetMessageType("error");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      // Delete child tables first, then rooms.
+      const { error: votesError } = await supabase.from("votes").delete().not("id", "is", null);
+      if (votesError) throw votesError;
+
+      const { error: playersError } = await supabase.from("players").delete().not("id", "is", null);
+      if (playersError) throw playersError;
+
+      const { error: gameStateError } = await supabase.from("game_state").delete().not("id", "is", null);
+      if (gameStateError) throw gameStateError;
+
+      const { error: roomsError } = await supabase.from("rooms").delete().not("id", "is", null);
+      if (roomsError) throw roomsError;
+
+      setResetMessage("Đã reset toàn bộ dữ liệu game trong DB.");
+      setResetMessageType("success");
+      setAdminUser("");
+      setAdminPass("");
+      setResetConfirmText("");
+      setShowResetPanel(false);
+    } catch (e: any) {
+      setResetMessage(e?.message || "Reset DB thất bại.");
+      setResetMessageType("error");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   if (screen === "howto") {
+    if (showTheory) {
+      const TheoryScreen = require("./theory-screen").TheoryScreen;
+      return <TheoryScreen onBack={() => setShowTheory(false)} />;
+    }
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <header className="px-6 py-4 border-b border-border flex items-center gap-3">
@@ -135,11 +201,26 @@ export function HomeScreen() {
           </button>
         </header>
         <div className="flex-1 overflow-y-auto px-6 py-8 max-w-2xl mx-auto w-full">
-          <h2 className="text-2xl font-bold mb-2 text-balance">Hướng dẫn chơi</h2>
-          <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-            Đây là game mô phỏng ra quyết định tập thể trong kinh tế thị trường định hướng xã hội chủ nghĩa.
-            Mỗi quyết định của nhóm sẽ tác động trực tiếp đến 3 chỉ số chung và điểm của từng vai.
-          </p>
+          <Reveal delayMs={40}>
+            <h2 className="text-2xl font-bold mb-2 text-balance">Hướng dẫn chơi</h2>
+            <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+              Đây là game mô phỏng ra quyết định tập thể trong kinh tế thị trường định hướng xã hội chủ nghĩa.
+              Mỗi quyết định của nhóm sẽ tác động trực tiếp đến 3 chỉ số chung và điểm của từng vai.
+            </p>
+          </Reveal>
+          <Reveal className="mb-8" delayMs={80}>
+            <div className="p-4 rounded-2xl border border-border bg-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">Có thể xem thêm phần nền tảng lý thuyết</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Tóm tắt gọn Chương 5 để hiểu bối cảnh và “quan hệ lợi ích” trước khi chơi.
+                </div>
+              </div>
+              <Button className="shrink-0" variant="outline" onClick={() => setShowTheory(true)}>
+                Xem lý thuyết chương 5
+              </Button>
+            </div>
+          </Reveal>
           <div className="space-y-6">
             {[
               {
@@ -172,8 +253,8 @@ export function HomeScreen() {
                 title: "Kết thúc sau 5 vòng",
                 desc: "Cuối game, hệ thống tổng hợp điểm vai trò và mức cân bằng 3 chỉ số để trả về kết cục tổng thể của nền kinh tế.",
               },
-            ].map((item) => (
-              <div key={item.step} className="flex gap-4">
+            ].map((item, index) => (
+              <Reveal key={item.step} className="flex gap-4" delayMs={100 + index * 35}>
                 <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-mono text-sm font-bold shrink-0">
                   {item.step}
                 </div>
@@ -181,35 +262,40 @@ export function HomeScreen() {
                   <div className="font-semibold">{item.title}</div>
                   <div className="text-sm text-muted-foreground leading-relaxed mt-0.5">{item.desc}</div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
 
-          <div className="mt-8 p-4 rounded-xl border border-border bg-card">
+          <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={180}>
             <h3 className="font-bold text-sm mb-2">Lưu ý quan trọng</h3>
             <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
               <div>• Mỗi vòng chỉ chọn được 1 phương án, đã chọn là không đổi trong vòng đó.</div>
               <div>• Nếu bạn chưa vote và hết giờ, hệ thống vẫn xử lý vòng dựa trên các phiếu đã có.</div>
               <div>• Mục tiêu của từng vai khác nhau, vì vậy tranh luận trước khi vote là phần cốt lõi của game.</div>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="mt-10">
+          <Reveal className="mt-10" delayMs={220}>
             <h3 className="font-bold mb-4">4 vai trò trong game</h3>
             <div className="grid grid-cols-2 gap-3">
-              {ROLES.map((role) => (
-                <div key={role.id} className={cn("p-3 rounded-xl border", role.bgClass, role.borderClass)}>
+              {ROLES.map((role, index) => (
+                <Reveal
+                  key={role.id}
+                  className={cn("p-3 rounded-xl border", role.bgClass, role.borderClass)}
+                  delayMs={250 + index * 30}
+                  threshold={0.05}
+                >
                   <div className={cn("font-semibold text-sm flex items-center gap-1.5", role.textClass)}>
                     <span>{role.icon}</span>
                     {role.label}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{role.description}</div>
-                </div>
+                </Reveal>
               ))}
             </div>
-          </div>
+          </Reveal>
 
-          <div className="mt-10 p-4 rounded-xl bg-secondary border border-border">
+          <Reveal className="mt-10 p-4 rounded-xl bg-secondary border border-border" delayMs={280}>
             <h3 className="font-bold text-sm mb-2">3 chỉ số chung</h3>
             <div className="space-y-1.5 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -225,10 +311,10 @@ export function HomeScreen() {
                 <strong className="text-indicator-stability">Ổn định thị trường</strong> — Kiểm soát biến động, niềm tin
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
         <div className="p-6">
-          <div className="max-w-2xl mx-auto flex flex-col items-center gap-4">
+          <Reveal className="max-w-2xl mx-auto flex flex-col items-center gap-4" delayMs={320}>
             <img
               src={HOWTO_FOOTER_GIF_URL}
               alt="Bắt đầu"
@@ -236,7 +322,7 @@ export function HomeScreen() {
               loading="eager"
             />
             <Button className="w-full" onClick={() => setScreen("home")}>Hiểu rồi, bắt đầu thôi!</Button>
-          </div>
+          </Reveal>
         </div>
       </div>
     );
@@ -443,6 +529,84 @@ export function HomeScreen() {
   // Main home
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <div className="fixed top-4 right-4 z-50 w-[260px]">
+        {/* Invisible hotspot: only users who know the position can open the panel */}
+        <button
+          type="button"
+          onClick={() => {
+            setShowResetPanel((prev) => !prev);
+            setResetMessage("");
+            setResetMessageType("");
+          }}
+          className="absolute top-0 right-0 w-8 h-8 opacity-0"
+          aria-label="Admin hotspot"
+          title=""
+        />
+
+        {showResetPanel && (
+          <div className="mt-2 p-3 rounded-xl border border-destructive/40 bg-background/95 backdrop-blur-sm space-y-2 shadow-lg">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-semibold text-destructive">Reset DB (Admin Only)</div>
+              <button
+                type="button"
+                onClick={() => setShowResetPanel(false)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+                aria-label="Đóng panel reset"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Hành động này sẽ xóa toàn bộ dữ liệu bảng rooms, players, votes, game_state.
+            </p>
+
+            <Input
+              placeholder="Tài khoản admin"
+              value={adminUser}
+              onChange={(e) => setAdminUser(e.target.value)}
+              className="h-8 text-xs"
+              maxLength={32}
+            />
+            <Input
+              type="password"
+              placeholder="Mật khẩu"
+              value={adminPass}
+              onChange={(e) => setAdminPass(e.target.value)}
+              className="h-8 text-xs"
+              maxLength={64}
+            />
+            <Input
+              placeholder="Nhập RESET để xác nhận"
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              className="h-8 text-xs uppercase"
+              maxLength={16}
+            />
+
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full"
+              onClick={handleResetDb}
+              disabled={resetLoading}
+            >
+              {resetLoading ? "Đang reset DB..." : "Reset DB"}
+            </Button>
+
+            {resetMessage && (
+              <div
+                className={cn(
+                  "text-xs",
+                  resetMessageType === "success" ? "text-indicator-equity" : "text-destructive"
+                )}
+              >
+                {resetMessage}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
         <>
           <button
@@ -498,12 +662,12 @@ export function HomeScreen() {
         </div>
 
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight text-balance mb-3">
-          Cân Bằng
+          {GAME_INTRO.title.split(" ").slice(0, 2).join(" ")}
           <br />
-          <span className="text-primary">Lợi Ích</span>
+          <span className="text-primary">{GAME_INTRO.title.split(" ").slice(2).join(" ")}</span>
         </h1>
         <p className="text-muted-foreground text-base sm:text-lg max-w-xs leading-relaxed mb-10 text-pretty">
-          Game ra quyết định tập thể về kinh tế thị trường định hướng xã hội chủ nghĩa
+          {GAME_INTRO.hook}
         </p>
 
         <div className="flex gap-3 mb-12">
@@ -520,6 +684,33 @@ export function HomeScreen() {
         </div>
 
         <div className="w-full max-w-xs space-y-3">
+          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mini screen</div>
+                <div className="text-sm font-semibold truncate">Video lý thuyết ngắn</div>
+              </div>
+              <a
+                href="/theory.mp4"
+                className="text-xs font-semibold text-primary hover:underline shrink-0"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Mở
+              </a>
+            </div>
+            <div className="bg-black/5">
+              <video
+                className="w-full aspect-video object-cover"
+                controls
+                preload="metadata"
+                playsInline
+              >
+                <source src="/theory.mp4" type="video/mp4" />
+              </video>
+            </div>
+          </div>
+
           <Button className="w-full h-12 text-base font-semibold" onClick={() => setScreen("create")}>
             Tạo phòng mới
           </Button>
@@ -551,21 +742,6 @@ export function HomeScreen() {
               loading="eager"
             />
           </button>
-        </div>
-      </div>
-
-      <div className="border-t border-border px-6 py-4">
-        <div className="flex justify-around text-center max-w-sm mx-auto">
-          {[
-            { label: "Vai trò", value: "4" },
-            { label: "Vòng chơi", value: "5" },
-            { label: "Kết thúc", value: "4" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <div className="text-xl font-bold text-primary">{stat.value}</div>
-              <div className="text-xs text-muted-foreground">{stat.label}</div>
-            </div>
-          ))}
         </div>
       </div>
 

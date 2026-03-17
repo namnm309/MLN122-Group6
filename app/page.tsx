@@ -1,12 +1,5 @@
-import { GameProvider } from "@/lib/game-context";
-import { GameOrchestrator } from "@/components/game/game-orchestrator";
+import { LandingShell } from "@/components/landing/landing-shell";
 
 export default function Page() {
-  return (
-    <GameProvider>
-      <main>
-        <GameOrchestrator />
-      </main>
-    </GameProvider>
-  );
+  return <LandingShell />;
 }

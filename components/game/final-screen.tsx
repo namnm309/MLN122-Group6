@@ -4,9 +4,11 @@ import { useGame } from "@/lib/game-context";
 import {
   GAME_ROUNDS,
   ROLES,
-  ENDINGS,
-  determineEnding,
+  GLOBAL_ENDINGS,
+  determineGlobalEnding,
+  determineRoleEnding,
   computeRoleScores,
+  computeSystemScores,
   type RoleId,
 } from "@/lib/game-data";
 import { Button } from "@/components/ui/button";
@@ -22,8 +24,13 @@ const MEDAL = ["#FFD700", "#C0C0C0", "#CD7F32", "#888"];
 
 export function FinalScreen() {
   const { state, restartGame } = useGame();
-  const ending = determineEnding(state.indicators);
   const roleScores = computeRoleScores(state.roundHistory);
+  const systemScores = computeSystemScores(state.roundHistory);
+  const ending = determineGlobalEnding({
+    indicators: state.indicators,
+    roleScores,
+    system: systemScores,
+  });
   const totalScore = state.indicators.growth + state.indicators.equity + state.indicators.stability;
 
   // Build leaderboard — roles that have players get ranked, show all 4 roles
@@ -39,6 +46,15 @@ export function FinalScreen() {
   const topScore = leaderboard[0].score;
   const winners = leaderboard.filter((r) => r.score === topScore);
   const isTie = winners.length > 1;
+
+  const roleEndingCards = leaderboard.map(({ role, score }) => {
+    const roleEnding = determineRoleEnding(role.id as RoleId, {
+      roleScore: score,
+      indicators: state.indicators,
+      system: systemScores,
+    });
+    return { role, score, roleEnding };
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -247,13 +263,70 @@ export function FinalScreen() {
           </div>
         </div>
 
+        {/* Role personal endings */}
+        <div>
+          <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
+            Kết Riêng Theo Vai
+          </h2>
+          <div className="space-y-2">
+            {roleEndingCards.map(({ role, roleEnding, score }) => (
+              <div key={role.id} className="p-3 rounded-xl border bg-card" style={{ borderColor: `${role.color}50` }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold" style={{ color: role.color }}>
+                    {role.icon} {role.label}
+                  </div>
+                  <div className="text-xs text-muted-foreground font-mono">Điểm vai: {score > 0 ? "+" : ""}{score}</div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{roleEnding.academicName}</div>
+                <div className="text-sm font-semibold mt-1">{roleEnding.title}</div>
+                <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{roleEnding.description}</div>
+                <div className="text-xs mt-2">
+                  <span className="font-semibold">Điểm mạnh:</span> {roleEnding.strengths}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  <span className="font-semibold text-foreground">Rủi ro:</span> {roleEnding.risks}
+                </div>
+                <div className="text-xs italic mt-1.5">"{roleEnding.quote}"</div>
+                <div className="text-[11px] text-muted-foreground mt-1">{roleEnding.vibe}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* System dimensions */}
+        <div>
+          <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
+            Chỉ Số Hệ Thống
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "Độ cứng quản trị", value: systemScores.rigidity },
+              { label: "Niềm tin xã hội", value: systemScores.socialTrust },
+              { label: "Sức khỏe thị trường", value: systemScores.marketHealth },
+              { label: "Xung đột lợi ích", value: systemScores.conflict },
+            ].map((item) => (
+              <div key={item.label} className="p-3 rounded-xl border bg-card border-border">
+                <div className="text-xs text-muted-foreground">{item.label}</div>
+                <div
+                  className={cn(
+                    "text-lg font-mono font-bold mt-1",
+                    item.value >= 0 ? "text-foreground" : "text-destructive"
+                  )}
+                >
+                  {item.value > 0 ? "+" : ""}{item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* All possible endings */}
         <div>
           <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
-            4 kết thúc có thể xảy ra
+            8 Kết Thúc Chung
           </h2>
           <div className="grid grid-cols-2 gap-2">
-            {ENDINGS.map((e) => (
+            {GLOBAL_ENDINGS.map((e) => (
               <div
                 key={e.id}
                 className={cn(
@@ -264,7 +337,7 @@ export function FinalScreen() {
               >
                 <div className="text-xl mb-1" aria-hidden="true">{e.icon}</div>
                 <div className="text-xs font-bold leading-snug">{e.title}</div>
-                <div className="text-xs text-muted-foreground mt-0.5 leading-snug">{e.subtitle}</div>
+                <div className="text-xs text-muted-foreground mt-0.5 leading-snug">{e.description}</div>
                 {e.id === ending.id && (
                   <div className="mt-1.5 text-xs font-bold" style={{ color: e.color }}>
                     Kết thúc của nhóm bạn
