@@ -13,6 +13,25 @@ type FullPageDeckProps = {
   slides: LandingSlide[];
 };
 
+function toDrivePreviewUrl(url: string) {
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes("drive.google.com")) return null;
+
+    // Patterns:
+    // - https://drive.google.com/file/d/<id>/view?...
+    // - https://drive.google.com/open?id=<id>
+    // - https://drive.google.com/uc?id=<id>&export=download
+    const pathMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
+    const id = pathMatch?.[1] ?? u.searchParams.get("id");
+    if (!id) return null;
+
+    return `https://drive.google.com/file/d/${id}/preview`;
+  } catch {
+    return null;
+  }
+}
+
 function isEditableElement(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName.toLowerCase();
@@ -210,14 +229,27 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
                 <FullPageSlide {...commonProps} actions={slide.actions}>
                   <div className="mx-auto w-full max-w-6xl">
                     <div className="overflow-hidden rounded-[2rem] border border-border bg-card/70 shadow-sm">
-                      <video
-                        controls
-                        preload="metadata"
-                        playsInline
-                        className="w-full bg-black/5 object-contain h-[42dvh] sm:h-[52dvh] max-h-[560px]"
-                      >
-                        <source src={slide.videoSrc} type="video/mp4" />
-                      </video>
+                      {(() => {
+                        const drivePreviewUrl = toDrivePreviewUrl(slide.videoSrc);
+                        return drivePreviewUrl ? (
+                        <iframe
+                          className="w-full h-[42dvh] sm:h-[52dvh] max-h-[560px] bg-black/5"
+                          src={drivePreviewUrl}
+                          allow="autoplay; encrypted-media; picture-in-picture"
+                          allowFullScreen
+                          title={slide.title}
+                        />
+                        ) : (
+                        <video
+                          controls
+                          preload="metadata"
+                          playsInline
+                          className="w-full bg-black/5 object-contain h-[42dvh] sm:h-[52dvh] max-h-[560px]"
+                        >
+                          <source src={slide.videoSrc} type="video/mp4" />
+                        </video>
+                        );
+                      })()}
                     </div>
 
                     {slide.note ? (
