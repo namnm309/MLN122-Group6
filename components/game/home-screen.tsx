@@ -204,8 +204,10 @@ export function HomeScreen() {
           <Reveal delayMs={40}>
             <h2 className="text-2xl font-bold mb-2 text-balance">Hướng dẫn chơi</h2>
             <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-              Đây là game mô phỏng ra quyết định tập thể trong kinh tế thị trường định hướng xã hội chủ nghĩa.
-              Mỗi quyết định của nhóm sẽ tác động trực tiếp đến 3 chỉ số chung và điểm của từng vai.
+              Đây là game mô phỏng một bàn đàm phán lợi ích trong nền kinh tế. Bạn không đi tìm đáp án
+              “đẹp nhất”, mà nhập vai để xem mỗi lựa chọn sẽ kéo hệ thống đi theo hướng nào.
+              Sau 5 vòng, game chấm đồng thời 2 thứ: bên nào được lợi nhiều nhất và nền kinh tế chung
+              đang cân bằng hay lệch pha.
             </p>
           </Reveal>
           <Reveal className="mb-8" delayMs={80}>
@@ -230,28 +232,28 @@ export function HomeScreen() {
               },
               {
                 step: "02",
-                title: "Người chơi chọn vai trước khi bắt đầu",
-                desc: "Mỗi người chọn một vai phù hợp góc nhìn của mình. Khi đã chọn vai, người chơi chờ host bấm bắt đầu game.",
+                title: "Host bấm bắt đầu, hệ thống random vai",
+                desc: "Người chơi không tự chọn vai. Khi host bắt đầu game, hệ thống sẽ random 1 trong 4 vai: Nhà nước, Doanh nghiệp, Người lao động, Người dân.",
               },
               {
                 step: "03",
-                title: "Mỗi vòng gồm bối cảnh + phương án",
-                desc: "Game có 5 vòng. Mỗi vòng đưa ra một tình huống kinh tế thực tế, kèm 4 phương án quyết định (A/B/C/D).",
+                title: "Mỗi vòng có bối cảnh riêng và đi theo từng lượt vai",
+                desc: "Game có 5 vòng. Mỗi vòng là một tình huống kinh tế thực tế và 4 vai không vote cùng lúc, mà đi theo thứ tự lượt đã được hệ thống quy định cho vòng đó.",
               },
               {
                 step: "04",
-                title: "Bỏ phiếu trong 30 giây",
-                desc: "Người chơi bỏ 1 phiếu duy nhất trong 30 giây. Có thể theo dõi số người đã vote theo thời gian thực. Hết giờ hệ thống tự chốt kết quả theo các phiếu hiện có.",
+                title: "Tới lượt vai nào, người của vai đó có tối đa 90 giây để chốt",
+                desc: "Khi tới lượt vai của bạn, bạn chọn 1 phương án A/B/C/D. Nếu trong cùng một vai có nhiều người chơi, lựa chọn của vai đó sẽ được chốt theo đa số phiếu. Hết giờ hoặc vote đủ, game tự chuyển sang vai tiếp theo.",
               },
               {
                 step: "05",
-                title: "Nhận kết quả vòng và cập nhật chỉ số",
-                desc: "Phương án thắng sẽ làm thay đổi 3 chỉ số chung: Tăng trưởng, Công bằng, Ổn định. Đồng thời mỗi vai nhận điểm lợi ích khác nhau theo phương án vừa thắng.",
+                title: "Cuối vòng, hệ thống cộng hiệu ứng của 4 vai rồi kiểm tra combo",
+                desc: "Game lấy phương án đã thắng của từng vai để tạo hiệu ứng gốc (`baseEffect`), sau đó kiểm tra các combo phối hợp tốt (`synergy`) hoặc combo kéo căng lợi ích (`conflict`) để cộng thưởng hoặc trừ thêm.",
               },
               {
                 step: "06",
-                title: "Kết thúc sau 5 vòng",
-                desc: "Cuối game, hệ thống tổng hợp điểm vai trò và mức cân bằng 3 chỉ số để trả về kết cục tổng thể của nền kinh tế.",
+                title: "Sau 5 vòng, game chốt người thắng và ending chung",
+                desc: "Cuối game, mỗi vai có một điểm cuối riêng để xếp hạng thắng thua. Đồng thời game cũng nhìn 3 chỉ số chung và trạng thái hệ thống để trả về ending của cả bàn chơi.",
               },
             ].map((item, index) => (
               <Reveal key={item.step} className="flex gap-4" delayMs={100 + index * 35}>
@@ -270,8 +272,61 @@ export function HomeScreen() {
             <h3 className="font-bold text-sm mb-2">Lưu ý quan trọng</h3>
             <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
               <div>• Mỗi vòng chỉ chọn được 1 phương án, đã chọn là không đổi trong vòng đó.</div>
-              <div>• Nếu bạn chưa vote và hết giờ, hệ thống vẫn xử lý vòng dựa trên các phiếu đã có.</div>
+              <div>• Mỗi lượt vai có tối đa 90 giây, không phải 30 giây.</div>
+              <div>• Nếu một vai không có người chơi thì vai đó không tạo lựa chọn trong vòng đó.</div>
               <div>• Mục tiêu của từng vai khác nhau, vì vậy tranh luận trước khi vote là phần cốt lõi của game.</div>
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={210}>
+            <h3 className="font-bold text-sm mb-2">Luồng thật của 1 vòng chơi</h3>
+            <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+              <div>
+                <strong className="text-foreground">1.</strong> Mỗi vòng có một bối cảnh kinh tế riêng và một
+                thứ tự lượt riêng giữa 4 vai.
+              </div>
+              <div>
+                <strong className="text-foreground">2.</strong> Khi tới lượt vai nào, chỉ người đang mang vai đó mới
+                được chốt A/B/C/D.
+              </div>
+              <div>
+                <strong className="text-foreground">3.</strong> Nếu cùng một vai có nhiều người, game lấy
+                <strong className="text-foreground"> phương án được nhiều phiếu nhất</strong> làm lựa chọn chính thức
+                của vai đó.
+              </div>
+              <div>
+                <strong className="text-foreground">4.</strong> Hệ thống cộng hiệu ứng từ lựa chọn của từng vai để
+                tạo ra <code className="font-mono text-xs">baseEffect</code>.
+              </div>
+              <div>
+                <strong className="text-foreground">5.</strong> Sau đó game kiểm tra các mẫu phối hợp đẹp
+                (<code className="font-mono text-xs">synergyRules</code>) hoặc các mẫu kéo xung đột lên cao
+                (<code className="font-mono text-xs">conflictRules</code>) để ra
+                <code className="font-mono text-xs"> finalEffect</code>.
+              </div>
+              <div>
+                <strong className="text-foreground">6.</strong> Cuối cùng, 3 chỉ số chung được cập nhật nhưng luôn bị
+                chặn trong khoảng <code className="font-mono text-xs">0 - 10</code>.
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={230}>
+            <h3 className="font-bold text-sm mb-2">`Synergy` và `Conflict` hiểu đơn giản là gì?</h3>
+            <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+              <div>
+                • <strong className="text-foreground">Synergy</strong> là khi các vai vô tình hoặc cố ý chọn một bộ
+                phương án “ăn khớp” với nhau. Khi đó game cộng thêm bonus cho chỉ số chung và đôi khi hạ xung đột.
+              </div>
+              <div>
+                • <strong className="text-foreground">Conflict</strong> là khi các vai kéo bàn chơi về những hướng quá
+                lệch nhau. Khi đó game trừ thêm điểm chỉ số, tăng xung đột hoặc làm hệ thống cứng/méo hơn.
+              </div>
+              <div>
+                • 4 vòng đầu dùng các bộ quy tắc combo cố định theo từng tình huống. Riêng
+                <strong className="text-foreground"> vòng 5</strong>, game nhìn cả 4 hướng lớn A/B/C/D để tính mức
+                hội tụ, chia phe hoặc bế tắc chiến lược, rồi mới cộng/trừ hiệu ứng tương ứng.
+              </div>
             </div>
           </Reveal>
 
@@ -309,6 +364,153 @@ export function HomeScreen() {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-indicator-stability inline-block" />
                 <strong className="text-indicator-stability">Ổn định thị trường</strong> — Kiểm soát biến động, niềm tin
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground leading-relaxed">
+              Cả 3 chỉ số này đều bắt đầu từ <strong className="text-foreground">5/10</strong>. Sau mỗi vòng, chúng tăng
+              hoặc giảm theo lựa chọn của cả bàn chơi.
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={300}>
+            <h3 className="font-bold text-sm mb-2">Ngoài 3 chỉ số chung, game còn cộng dồn 4 chỉ số hệ thống</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {[
+                {
+                  title: "Độ cứng quản trị",
+                  desc: "Càng cao thì hệ thống càng bị siết chặt. Có thể yên nhanh, nhưng dễ kém linh hoạt.",
+                },
+                {
+                  title: "Niềm tin xã hội",
+                  desc: "Càng cao thì các bên càng dễ chấp nhận nhau, thương lượng dễ hơn và thị trường đỡ hoài nghi.",
+                },
+                {
+                  title: "Sức khỏe thị trường",
+                  desc: "Phản ánh việc thị trường còn thông, còn động lực cạnh tranh và còn tín hiệu giá đúng hay không.",
+                },
+                {
+                  title: "Xung đột lợi ích",
+                  desc: "Càng cao thì bàn chơi càng căng, xã hội càng khó phối hợp và nhiều vai sẽ bị phạt ở cuối game.",
+                },
+              ].map((item) => (
+                <div key={item.title} className="rounded-xl border border-border bg-background/60 p-3">
+                  <div className="font-semibold text-foreground text-sm">{item.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground leading-relaxed">
+              4 chỉ số này không hiện nổi bật ngay trong lúc vote, nhưng được cộng dồn xuyên suốt 5 vòng và ảnh hưởng trực
+              tiếp tới <strong className="text-foreground">điểm cuối</strong> của từng vai.
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={330}>
+            <h3 className="font-bold text-sm mb-2">Cách tính điểm cuối game</h3>
+            <div className="rounded-xl border border-border bg-background/70 p-3 mb-3">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Công thức tổng quát</div>
+              <code className="text-sm font-mono text-foreground">
+                FinalScore = rolePoints + Utility(theo trạng thái cuối game) - Penalty(cực đoan)
+              </code>
+            </div>
+            <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+              <div>
+                • <strong className="text-foreground">rolePoints</strong>: tổng điểm lợi ích vai của bạn cộng dồn sau 5
+                vòng.
+              </div>
+              <div>
+                • <strong className="text-foreground">Utility</strong>: điểm thưởng theo trạng thái cuối cùng của nền
+                kinh tế và hệ thống, khác nhau với từng vai vì mỗi vai quan tâm lợi ích khác nhau.
+              </div>
+              <div>
+                • <strong className="text-foreground">Penalty</strong>: điểm phạt khi hệ thống rơi vào các trạng thái quá
+                cực đoan đối với vai đó.
+              </div>
+              <div>
+                • Vai nào có <strong className="text-foreground">FinalScore</strong> cao nhất thì thắng. Tổng 3 chỉ số
+                chung cao không đồng nghĩa chắc chắn vai của bạn thắng.
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3" delayMs={350}>
+            {[
+              {
+                title: "Nhà nước",
+                utility:
+                  "2.2*Ổn định + 1.8*Niềm tin xã hội + 1.2*Tăng trưởng + 0.8*Công bằng + 0.8*Sức khỏe thị trường - 2.0*Xung đột - 1.2*Độ cứng",
+                penalty: [
+                  "Tăng trưởng >= 8 và Công bằng <= 2: +3 phạt",
+                  "Ổn định >= 8 và Độ cứng >= 7: +4 phạt",
+                  "Niềm tin xã hội <= 1 và Xung đột >= 6: +5 phạt",
+                  "Tăng trưởng <= 1 và Ổn định <= 2: +3 phạt",
+                ],
+              },
+              {
+                title: "Doanh nghiệp",
+                utility:
+                  "2.3*Tăng trưởng + 2.0*Sức khỏe thị trường + 1.0*Ổn định + 0.4*Niềm tin xã hội + 0.3*Công bằng - 1.6*Độ cứng - 1.4*Xung đột",
+                penalty: [
+                  "Công bằng >= 8 và Sức khỏe thị trường <= 2: +3 phạt",
+                  "Độ cứng >= 7: +4 phạt",
+                  "Sức khỏe thị trường <= 2 và Niềm tin xã hội <= 2: +4 phạt",
+                  "Tăng trưởng <= 1: +3 phạt",
+                ],
+              },
+              {
+                title: "Người lao động",
+                utility:
+                  "2.3*Công bằng + 2.0*Ổn định + 1.3*Niềm tin xã hội + 0.8*Tăng trưởng + 0.4*Sức khỏe thị trường - 1.5*Xung đột - 0.8*Độ cứng",
+                penalty: [
+                  "Tăng trưởng >= 8 và Công bằng <= 2: +5 phạt",
+                  "Niềm tin xã hội <= 1 và Xung đột >= 6: +4 phạt",
+                  "Công bằng <= 2: +4 phạt",
+                  "Ổn định <= 2: +3 phạt",
+                ],
+              },
+              {
+                title: "Người dân",
+                utility:
+                  "2.0*Công bằng + 2.1*Niềm tin xã hội + 1.5*Ổn định + 0.7*Sức khỏe thị trường + 0.5*Tăng trưởng - 1.9*Xung đột - 0.9*Độ cứng",
+                penalty: [
+                  "Niềm tin xã hội <= 1 và Xung đột >= 6: +5 phạt",
+                  "Tăng trưởng >= 8 và Công bằng <= 2: +4 phạt",
+                  "Sức khỏe thị trường <= 2 và Niềm tin xã hội <= 2: +4 phạt",
+                  "Ổn định <= 2: +3 phạt",
+                ],
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-xl border border-border bg-card p-4">
+                <div className="font-semibold text-foreground">{item.title}</div>
+                <div className="text-xs text-muted-foreground mt-2 uppercase tracking-wider">Utility</div>
+                <code className="block text-xs font-mono text-foreground leading-relaxed mt-1 whitespace-pre-wrap">
+                  {item.utility}
+                </code>
+                <div className="text-xs text-muted-foreground mt-3 uppercase tracking-wider">Penalty</div>
+                <div className="mt-1 space-y-1">
+                  {item.penalty.map((line) => (
+                    <div key={line} className="text-xs text-muted-foreground leading-relaxed">
+                      • {line}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </Reveal>
+
+          <Reveal className="mt-6 p-4 rounded-xl border border-border bg-card" delayMs={370}>
+            <h3 className="font-bold text-sm mb-2">Hiểu nhanh để khỏi nhầm</h3>
+            <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
+              <div>
+                • <strong className="text-foreground">Thắng vai</strong> là chuyện vai nào có
+                <code className="font-mono text-xs"> FinalScore</code> cao nhất.
+              </div>
+              <div>
+                • <strong className="text-foreground">Ending chung</strong> là bức tranh của cả nền kinh tế sau 5 vòng.
+              </div>
+              <div>
+                • Vì vậy hoàn toàn có thể xảy ra chuyện <strong className="text-foreground">một vai thắng lớn</strong>
+                nhưng ending chung của cả bàn lại xấu, hoặc ngược lại.
               </div>
             </div>
           </Reveal>
