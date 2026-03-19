@@ -14,6 +14,8 @@ export function RoundResult() {
 
   if (!round || !history) return null;
 
+  const formatDelta = (value: number) => (value > 0 ? `+${value}` : `${value}`);
+
   const totalVotes = Object.values(history.voteBreakdown).reduce((a, b) => a + b, 0);
   const isLastRound = state.currentRound >= GAME_ROUNDS.length;
   const finalEffect = getHistoryEffect(history);
@@ -32,6 +34,24 @@ export function RoundResult() {
     .filter((r) => r.score === maxScore && maxScore > 0)
     .map((r) => ROLES.find((role) => role.id === r.roleId))
     .filter(Boolean);
+
+  const topRolesExplanation = hasConflict
+    ? "Vòng này đang nghiêng về xung đột lợi ích, nên các vai được lợi nhất là những bên kéo điểm về phía mình nhiều hơn."
+    : hasSynergy
+      ? "Vòng này có phối hợp ăn khớp, nên các vai được lợi nhất là những bên chạm đúng “điểm gặp nhau” để nhận thêm điểm."
+      : "Chưa thấy xung đột hay phối hợp rõ rệt, nhưng vẫn có vài vai ghi điểm vòng này cao hơn mặt bằng.";
+
+  const indicatorDeltaText =
+    `Trong vòng này: ` +
+    `Tăng trưởng ${formatDelta(finalEffect.growth)}, ` +
+    `Công bằng ${formatDelta(finalEffect.equity)}, ` +
+    `Ổn định ${formatDelta(finalEffect.stability)}.`;
+
+  const indicatorWhyText = hasConflict
+    ? "Xung đột khiến hệ thống bị kéo căng hơn: có thể tăng ở mặt này nhưng giảm ở mặt khác."
+    : hasSynergy
+      ? "Phối hợp làm các lựa chọn ăn khớp: các chỉ số thường được đẩy về đúng nhịp."
+      : "Không có combo rõ rệt: chỉ số biến động theo tổng hợp lựa chọn trong vòng.";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -94,6 +114,7 @@ export function RoundResult() {
                   ) : null
                 )}
               </div>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{topRolesExplanation}</p>
             </div>
           )}
         </div>
@@ -109,6 +130,21 @@ export function RoundResult() {
                 ? round.roles[role.id as RoleId].options.find((item) => item.id === choiceId)
                 : null;
               const roleScore = finalEffect.rolePoints[role.id as RoleId] ?? 0;
+
+              const roleWhy =
+                roleScore > 0
+                  ? hasConflict
+                    ? "Kéo được điểm về phía mình trong bối cảnh căng."
+                    : hasSynergy
+                      ? "Chạm đúng nhịp phối hợp nên được cộng điểm."
+                      : "Lựa chọn tạo khác biệt theo hướng thuận lợi."
+                  : roleScore < 0
+                    ? hasConflict
+                      ? "Kéo lệch nhịp khi bàn đang căng nên bị thiệt."
+                      : hasSynergy
+                        ? "Không bắt được nhịp phối hợp nên hụt điểm."
+                        : "Lựa chọn tạo bất lợi tương đối so với mặt bằng vòng."
+                    : "Điểm vòng này cân bằng, chưa tạo khác biệt rõ.";
 
               return (
                 <div
@@ -142,7 +178,9 @@ export function RoundResult() {
                   ) : (
                     <div className="mt-3 text-xs text-muted-foreground">Không có người chơi ở vai này.</div>
                   )}
-                  <p className="text-[11px] text-muted-foreground mt-1.5">Điểm chỉ tính riêng vòng này.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Điểm chỉ tính riêng vòng này. {roleWhy}
+                  </p>
                 </div>
               );
             })}
@@ -158,6 +196,13 @@ export function RoundResult() {
             Trạng thái chỉ số sau vòng này
           </h3>
           <IndicatorBar indicators={state.indicators} showLabels />
+          <div className="mt-3 p-3 rounded-xl bg-secondary/50 border border-border">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Vì sao tăng/giảm
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{indicatorDeltaText}</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{indicatorWhyText}</p>
+          </div>
         </div>
       </div>
 
