@@ -1,45 +1,10 @@
 "use client";
 
 import { useGame } from "@/lib/game-context";
-import { GAME_ROUNDS, ROLES, computeRoleScores, getHistoryEffect, type RoundEffect, type RoleId } from "@/lib/game-data";
-import { IndicatorBar, IndicatorDelta } from "./indicator-bar";
+import { GAME_ROUNDS, ROLES, getHistoryEffect, type RoleId } from "@/lib/game-data";
+import { IndicatorBar } from "./indicator-bar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-function EffectSummary({ title, effect }: { title: string; effect: RoundEffect }) {
-  return (
-    <div className="rounded-2xl border bg-card p-4">
-      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-        {title}
-      </div>
-      <IndicatorDelta effect={effect} />
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        {ROLES.map((role) => {
-          const pts = effect.rolePoints[role.id as RoleId] ?? 0;
-          return (
-            <div key={role.id} className="rounded-xl border border-border bg-background/40 px-3 py-2 text-xs">
-              <span className={cn("font-semibold", role.textClass)}>{role.label}</span>
-              <span className="ml-2 font-mono">{pts > 0 ? "+" : ""}{pts}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        {[
-          ["Độ cứng", effect.system.rigidity],
-          ["Niềm tin", effect.system.socialTrust],
-          ["Sức khỏe thị trường", effect.system.marketHealth],
-          ["Xung đột", effect.system.conflict],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-border bg-background/40 px-3 py-2 text-xs">
-            <span className="text-muted-foreground">{label}</span>
-            <span className="ml-2 font-mono text-foreground">{Number(value) > 0 ? "+" : ""}{value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function RoundResult() {
   const { state, isHost, nextRound } = useGame();
@@ -51,11 +16,22 @@ export function RoundResult() {
 
   const totalVotes = Object.values(history.voteBreakdown).reduce((a, b) => a + b, 0);
   const isLastRound = state.currentRound >= GAME_ROUNDS.length;
-  const cumulativeScores = computeRoleScores(state.roundHistory);
-  const baseEffect = history.baseEffect ?? getHistoryEffect(history);
   const finalEffect = getHistoryEffect(history);
   const synergyApplied = history.synergyApplied ?? [];
   const conflictApplied = history.conflictApplied ?? [];
+
+  const hasConflict = conflictApplied.length > 0;
+  const hasSynergy = synergyApplied.length > 0;
+
+  const roleScoresThisRound = (["state", "business", "worker", "citizen"] as RoleId[]).map((rid) => ({
+    roleId: rid,
+    score: finalEffect.rolePoints[rid] ?? 0,
+  }));
+  const maxScore = Math.max(...roleScoresThisRound.map((r) => r.score), 0);
+  const topRolesThisRound = roleScoresThisRound
+    .filter((r) => r.score === maxScore && maxScore > 0)
+    .map((r) => ROLES.find((role) => role.id === r.roleId))
+    .filter(Boolean);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -73,14 +49,53 @@ export function RoundResult() {
 
       <div className="flex-1 overflow-y-auto px-4 py-5 max-w-3xl mx-auto w-full space-y-5">
         <div className="rounded-2xl border border-primary/35 bg-primary/5 p-5">
-          <div className="text-xs font-medium uppercase tracking-wider text-primary mb-2">
-            Vòng này đã bộc lộ điều gì?
-          </div>
           <h2 className="text-xl font-extrabold leading-tight">{round.title}</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mt-2">{round.context}</p>
-          <p className="text-xs text-muted-foreground leading-relaxed mt-3">
-            Cùng một biến cố, mỗi vai kéo theo một hướng khác nhau. Kết quả bên dưới cho thấy ai đang được lợi và hệ thống đang phải trả giá ra sao.
-          </p>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {hasConflict ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/50 bg-destructive/15 px-3 py-1.5 text-sm font-semibold text-destructive">
+                Có xung đột
+              </span>
+            ) : hasSynergy ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-sm font-semibold text-primary">
+                Phối hợp khá ổn
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-3 py-1.5 text-sm font-medium text-muted-foreground">
+                Trung tính, chưa rõ xung đột
+              </span>
+            )}
+          </div>
+          {hasConflict && (
+            <p className="text-xs text-muted-foreground">
+              Vòng này các vai kéo mạnh về phía mình, hệ thống đang phải gồng.
+            </p>
+          )}
+          {hasSynergy && (
+            <p className="text-xs text-muted-foreground">
+              Vòng này mọi người đã tìm được điểm gặp nhau, hệ thống được cộng thêm.
+            </p>
+          )}
+          {topRolesThisRound.length > 0 && (
+            <div className="pt-2 border-t border-border">
+              <div className="text-xs text-muted-foreground mb-1.5">Bên được lợi nhất vòng này:</div>
+              <div className="flex flex-wrap gap-2">
+                {topRolesThisRound.map((role) =>
+                  role ? (
+                    <span
+                      key={role.id}
+                      className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border", role.bgClass, role.textClass, role.borderClass)}
+                    >
+                      {role.icon} {role.label}
+                    </span>
+                  ) : null
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
@@ -94,7 +109,6 @@ export function RoundResult() {
                 ? round.roles[role.id as RoleId].options.find((item) => item.id === choiceId)
                 : null;
               const roleScore = finalEffect.rolePoints[role.id as RoleId] ?? 0;
-              const cumulative = cumulativeScores[role.id as RoleId] ?? 0;
 
               return (
                 <div
@@ -109,92 +123,34 @@ export function RoundResult() {
                     <div className={cn("text-sm font-bold", role.textClass)}>{role.label}</div>
                   </div>
                   {option ? (
-                    <>
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-secondary text-muted-foreground flex items-center justify-center text-xs font-bold">
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-7 h-7 shrink-0 rounded-lg bg-secondary text-muted-foreground flex items-center justify-center text-xs font-bold">
                           {option.id}
                         </span>
-                        <div className="text-sm font-semibold">{option.label}</div>
+                        <div className="text-sm font-semibold truncate">{option.label}</div>
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{option.text}</p>
-                    </>
+                      <span
+                        className={cn(
+                          "shrink-0 font-mono text-sm font-bold",
+                          roleScore > 0 ? "text-primary" : roleScore < 0 ? "text-destructive" : "text-muted-foreground"
+                        )}
+                      >
+                        {roleScore > 0 ? "+" : ""}{roleScore}
+                      </span>
+                    </div>
                   ) : (
                     <div className="mt-3 text-xs text-muted-foreground">Không có người chơi ở vai này.</div>
                   )}
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    Điểm vòng này: <span className="font-mono text-foreground">{roleScore > 0 ? "+" : ""}{roleScore}</span>
-                    {" · "}
-                    Tổng: <span className="font-mono font-bold text-foreground">{cumulative > 0 ? "+" : ""}{cumulative}</span>
-                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">Điểm chỉ tính riêng vòng này.</p>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <EffectSummary title="Hiệu ứng cơ sở từ 4 lựa chọn" effect={baseEffect} />
-
-        <div className="grid gap-3 lg:grid-cols-2">
-          <div className="rounded-2xl border bg-card p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Synergy Bonus
-            </div>
-            {synergyApplied.length ? (
-              <div className="space-y-3">
-                {synergyApplied.map((rule) => (
-                  <div key={rule.id} className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-                    <div className="text-sm font-semibold text-primary">{rule.label}</div>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rule.text}</p>
-                    <p className="text-[11px] text-primary/90 mt-2 leading-relaxed">
-                      Vòng này mọi người đã nhường nhau vừa đủ nên hệ thống ăn được bonus thật, không chỉ đẹp trên lời nói.
-                    </p>
-                    <div className="mt-2">
-                      <IndicatorDelta effect={rule.effect} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">Không có combo phối hợp đẹp nào được kích hoạt.</div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border bg-card p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Conflict Penalty
-            </div>
-            {conflictApplied.length ? (
-              <div className="space-y-3">
-                {conflictApplied.map((rule) => (
-                  <div key={rule.id} className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                    <div className="text-sm font-semibold text-destructive">{rule.label}</div>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rule.text}</p>
-                    <p className="text-[11px] text-destructive/90 mt-2 leading-relaxed">
-                      Các vai kéo mạnh về phần mình nên hệ thống dính phạt. Đây là lúc thấy rõ lợi ích riêng không tự động biến thành lợi ích chung.
-                    </p>
-                    <div className="mt-2">
-                      <IndicatorDelta effect={rule.effect} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">Không có tổ hợp xung đột mạnh nào bị phạt thêm.</div>
-            )}
-          </div>
-        </div>
-
-        <EffectSummary title="Tác động cuối cùng của vòng này" effect={finalEffect} />
-
         <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-            Phân tích
-          </div>
-          <p className="text-sm leading-relaxed text-foreground italic">"{round.message}"</p>
-          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{round.lesson}</p>
-          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-            Nói ngắn gọn: nếu mỗi bên chỉ ôm phần ngon nhất cho mình, bàn chơi sẽ rất nhanh trượt từ tranh luận sang bất ổn.
-          </p>
+          <p className="text-sm leading-relaxed text-foreground italic">&ldquo;{round.message}&rdquo;</p>
         </div>
 
         <div>
