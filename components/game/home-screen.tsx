@@ -204,10 +204,9 @@ export function HomeScreen() {
           <Reveal delayMs={40}>
             <h2 className="text-2xl font-bold mb-2 text-balance">Hướng dẫn chơi</h2>
             <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-              Đây là game mô phỏng một bàn đàm phán lợi ích trong nền kinh tế. Bạn không đi tìm đáp án
-              “đẹp nhất”, mà nhập vai để xem mỗi lựa chọn sẽ kéo hệ thống đi theo hướng nào.
-              Sau 5 vòng, game chấm đồng thời 2 thứ: bên nào được lợi nhiều nhất và nền kinh tế chung
-              đang cân bằng hay lệch pha.
+              Đây là game mô phỏng bàn đàm phán lợi ích trong nền kinh tế. Bạn cần chơi đúng vai để bảo vệ lợi ích
+              của vai mình, nhưng vẫn phải nhìn cái giá hệ thống phải trả. Flow mới có cơ chế budget lệch vai và phạt
+              vượt budget để tránh chiến lược chọn đáp án “đẹp chung” ở mọi vòng.
             </p>
           </Reveal>
           <Reveal className="mb-8" delayMs={80}>
@@ -242,18 +241,28 @@ export function HomeScreen() {
               },
               {
                 step: "04",
-                title: "Tới lượt vai nào, người của vai đó có tối đa 30 giây để chốt",
-                desc: "Khi tới lượt vai của bạn, bạn chọn 1 phương án A/B/C/D. Nếu trong cùng một vai có nhiều người chơi, lựa chọn của vai đó sẽ được chốt theo đa số phiếu. Hết giờ hoặc vote đủ, game tự chuyển sang vai tiếp theo.",
+                title: "Tới lượt vai nào, vai đó chốt A/B/C/D trong 90 giây",
+                desc: "Nếu trong cùng vai có nhiều người chơi, hệ thống lấy phương án đa số để đại diện cho vai. Vote đủ hoặc hết giờ thì tự chuyển sang vai tiếp theo.",
               },
               {
                 step: "05",
-                title: "Cuối vòng, hệ thống cộng hiệu ứng của 4 vai rồi kiểm tra combo",
-                desc: "Game lấy phương án đã thắng của từng vai để tạo hiệu ứng gốc (`baseEffect`), sau đó kiểm tra các combo phối hợp tốt (`synergy`) hoặc combo kéo căng lợi ích (`conflict`) để cộng thưởng hoặc trừ thêm.",
+                title: "Flow mới: mỗi vai có budget lệch vai = 2",
+                desc: "Nếu bạn chọn phương án bị xem là lệch mục tiêu vai, game trừ 1 budget. Trên màn vote sẽ hiện hint theo vai, budget còn lại và cảnh báo lệch vai ngay ở từng option.",
               },
               {
                 step: "06",
-                title: "Sau 5 vòng, game chốt người thắng và ending chung",
-                desc: "Cuối game, mỗi vai có một điểm cuối riêng để xếp hạng thắng thua. Đồng thời game cũng nhìn 3 chỉ số chung và trạng thái hệ thống để trả về ending của cả bàn chơi.",
+                title: "Nếu vượt budget vẫn được chọn, nhưng sẽ bị phạt",
+                desc: "Khi budget = 0, chọn tiếp phương án lệch vai sẽ bị trừ điểm vai theo mức lũy tiến, đồng thời tăng xung đột hệ thống. Từ lần vượt sau, niềm tin xã hội còn bị trừ thêm.",
+              },
+              {
+                step: "07",
+                title: "Cuối vòng game chốt baseEffect + synergy/conflict + penalty budget",
+                desc: "Kết quả vòng là tổng hiệu ứng lựa chọn 4 vai, cộng/trừ combo phối hợp hoặc xung đột, rồi mới cộng phạt do vượt budget. Vì vậy cùng một đáp án có thể cho kết quả khác tùy bối cảnh cả bàn.",
+              },
+              {
+                step: "08",
+                title: "Kết thúc 5 vòng: chấm vai thắng và ending xã hội",
+                desc: "Vai thắng theo điểm cuối từng vai. Ending chung phản ánh trạng thái xã hội/hệ thống, trong đó `social-friction` dễ xuất hiện hơn khi conflict cao và equity giảm.",
               },
             ].map((item, index) => (
               <Reveal key={item.step} className="flex gap-4" delayMs={100 + index * 35}>
@@ -271,10 +280,10 @@ export function HomeScreen() {
           <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={180}>
             <h3 className="font-bold text-sm mb-2">Hiểu nhanh trong 30 giây</h3>
             <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
-              <div>• Game có 5 vòng, vai được random khi host bấm bắt đầu.</div>
-              <div>• Mỗi vòng đi theo lượt từng vai. Tới lượt vai nào thì vai đó chốt A/B/C/D trong tối đa 30 giây.</div>
-              <div>• Nếu một vai có nhiều người, game lấy phương án được nhiều phiếu nhất của vai đó.</div>
-              <div>• Mục tiêu của bạn là bảo vệ lợi ích của vai mình, không phải chọn đáp án “đẹp” cho tất cả.</div>
+              <div>• Mỗi vai có budget lệch vai = 2 cho cả ván.</div>
+              <div>• Lệch vai khi còn budget: trừ 1 budget, chưa bị phạt điểm vai.</div>
+              <div>• Lệch vai khi hết budget: bị trừ điểm vai lũy tiến, conflict tăng, có thể giảm social trust.</div>
+              <div>• Mục tiêu là chơi đúng vai và quản trị cái giá hệ thống, không phải chọn đáp án trung tính mọi lúc.</div>
             </div>
           </Reveal>
 
@@ -326,7 +335,18 @@ export function HomeScreen() {
               <div>• Game cộng hiệu ứng từ lựa chọn của 4 vai để ra kết quả gốc của vòng.</div>
               <div>• Nếu các lựa chọn ăn khớp nhau, game cộng thêm thưởng (`synergy`).</div>
               <div>• Nếu các lựa chọn kéo nhau quá lệch, game trừ thêm hoặc tăng xung đột (`conflict`).</div>
-              <div>• Ngoài 3 chỉ số chung, game còn âm thầm cộng dồn 4 chỉ số hệ thống: độ cứng, niềm tin, sức khỏe thị trường và xung đột.</div>
+              <div>• Sau đó game áp quy tắc budget lệch vai và phạt vượt budget (nếu có).</div>
+              <div>• Ngoài 3 chỉ số chung, game còn cộng dồn 4 chỉ số hệ thống: độ cứng, niềm tin, sức khỏe thị trường và xung đột.</div>
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-8 p-4 rounded-xl border border-border bg-card" delayMs={315}>
+            <h3 className="font-bold text-sm mb-2">Khi vượt budget thì chuyện gì xảy ra?</h3>
+            <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
+              <div>• Lần vượt đầu: phạt điểm vai và cộng thêm xung đột hệ thống.</div>
+              <div>• Vượt liên tiếp: mức phạt tăng dần, rủi ro xã hội cao hơn.</div>
+              <div>• Bạn vẫn được quyền chọn, nhưng phải trả giá rõ ràng cho quyết định đó.</div>
+              <div>• Kết quả này sẽ hiện ở màn kết quả vòng và recap cuối game.</div>
             </div>
           </Reveal>
 
@@ -351,6 +371,7 @@ export function HomeScreen() {
             <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
               <div>• Điểm cao cho vai bạn chưa chắc đồng nghĩa nền kinh tế đang tốt.</div>
               <div>• Ending chung đẹp chưa chắc vai bạn là người thắng.</div>
+              <div>• Chơi lệch vai liên tục sẽ làm bạn mất điểm và hệ thống căng hơn.</div>
               <div>• Nói ngắn gọn: game này chấm cả <strong className="text-foreground">lợi ích riêng</strong> lẫn <strong className="text-foreground">cái giá chung</strong>.</div>
             </div>
           </Reveal>
