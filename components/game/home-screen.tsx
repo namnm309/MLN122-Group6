@@ -25,6 +25,7 @@ const HOWTO_FOOTER_GIF_URL = "/Animation%20Trend%20Sticker.gif";
 export function HomeScreen() {
   const [screen, setScreen] = useState<Screen>("home");
   const [showTheory, setShowTheory] = useState(false);
+  const [showDetailedGuide, setShowDetailedGuide] = useState(false);
   const { createRoom, joinRoom, dbReady } = useGame();
 
   // Admin reset DB
@@ -189,6 +190,10 @@ export function HomeScreen() {
     if (showTheory) {
       const TheoryScreen = require("./theory-screen").TheoryScreen;
       return <TheoryScreen onBack={() => setShowTheory(false)} />;
+    }
+    if (showDetailedGuide) {
+      const DetailedGuideScreen = require("./detailed-guide-screen").DetailedGuideScreen;
+      return <DetailedGuideScreen onBack={() => setShowDetailedGuide(false)} />;
     }
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -377,7 +382,7 @@ export function HomeScreen() {
           </Reveal>
         </div>
         <div className="p-6">
-          <Reveal className="max-w-2xl mx-auto flex flex-col items-center gap-4" delayMs={320}>
+          <Reveal className="max-w-2xl mx-auto flex flex-col items-center gap-3" delayMs={320}>
             <img
               src={HOWTO_FOOTER_GIF_URL}
               alt="Bắt đầu"
@@ -385,6 +390,9 @@ export function HomeScreen() {
               loading="eager"
             />
             <Button className="w-full" onClick={() => setScreen("home")}>Hiểu rồi, bắt đầu thôi!</Button>
+            <Button className="w-full" variant="outline" onClick={() => setShowDetailedGuide(true)}>
+              Xem hướng dẫn siêu chi tiết
+            </Button>
           </Reveal>
         </div>
       </div>
