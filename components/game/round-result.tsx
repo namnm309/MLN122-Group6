@@ -202,6 +202,9 @@ export function RoundResult() {
             </div>
             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{indicatorDeltaText}</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{indicatorWhyText}</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Tổng điểm để win cuối game được cộng dần từ `rolePoints` của từng vòng, không lấy trực tiếp từ 3 chỉ số nền này.
+            </p>
           </div>
         </div>
       </div>

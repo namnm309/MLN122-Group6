@@ -1,13 +1,72 @@
 "use client";
 
 import { useGame, ROUND_DURATION_SECONDS } from "@/lib/game-context";
-import { GAME_ROUNDS, ROLES, RoleId } from "@/lib/game-data";
+import { GAME_ROUNDS, ROLES, RoleId, type RoleChoiceOption } from "@/lib/game-data";
 import { IndicatorBar } from "./indicator-bar";
 import { RoleBadge } from "./role-badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const ROLE_IDS: RoleId[] = ["state", "business", "worker", "citizen"];
+const MACRO_LABELS = {
+  growth: "Tăng trưởng",
+  equity: "Công bằng",
+  stability: "Ổn định",
+} as const;
+
+function formatSigned(value: number) {
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function getTopMacroEffects(option: RoleChoiceOption) {
+  return (Object.entries(option.macro) as Array<[keyof typeof MACRO_LABELS, number | undefined]>)
+    .filter(([, value]) => typeof value === "number" && value !== 0)
+    .sort((a, b) => Math.abs((b[1] ?? 0)) - Math.abs((a[1] ?? 0)))
+    .slice(0, 2)
+    .map(([key, value]) => `${MACRO_LABELS[key]} ${formatSigned(value ?? 0)}`);
+}
+
+function OptionTradeoffPreview({ option, roleId }: { option: RoleChoiceOption; roleId: RoleId }) {
+  const roleDelta = option.rolePoints[roleId] ?? 0;
+  const topMacroEffects = getTopMacroEffects(option);
+  const conflictDelta = option.system.conflict ?? 0;
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className="flex flex-wrap gap-1.5">
+        <span
+          className={cn(
+            "text-[11px] px-2 py-0.5 rounded-full border font-semibold",
+            roleDelta > 0
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : roleDelta < 0
+                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                : "border-border bg-background/70 text-muted-foreground"
+          )}
+        >
+          Điểm vai: {formatSigned(roleDelta)}
+        </span>
+        {conflictDelta !== 0 && (
+          <span
+            className={cn(
+              "text-[11px] px-2 py-0.5 rounded-full border",
+              conflictDelta > 0
+                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                : "border-primary/30 bg-primary/10 text-primary"
+            )}
+          >
+            Xung đột: {formatSigned(conflictDelta)}
+          </span>
+        )}
+      </div>
+      {topMacroEffects.length > 0 && (
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Giá hệ thống: {topMacroEffects.join(", ")}.
+        </p>
+      )}
+    </div>
+  );
+}
 
 function HostRoundDashboard() {
   const { state, endRoundNow, dbReady } = useGame();
@@ -92,6 +151,9 @@ function HostRoundDashboard() {
               <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
                 Nhìn xem mỗi vai đang nghiêng về option nào. Đây là một bàn đàm phán lợi ích, không phải bài trắc nghiệm tìm đáp án đẹp nhất.
               </p>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                Mỗi đáp án đều cho vai đó một mức điểm cộng hoặc trừ. Sau 5 vòng, tổng điểm vai cao nhất sẽ là bên hưởng lợi nhất.
+              </p>
             </div>
             <div className="shrink-0 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-mono text-muted-foreground">
               {votedCount}/{totalCount} đã vote
@@ -157,6 +219,7 @@ function HostRoundDashboard() {
                             <div className="text-xs text-muted-foreground leading-relaxed mt-1">
                               {option.text}
                             </div>
+                            <OptionTradeoffPreview option={option} roleId={roleId} />
                           </div>
                           <div className="text-xs font-mono text-muted-foreground shrink-0">
                             {tally.count} phiếu
@@ -275,6 +338,9 @@ function GuestRoundScreen() {
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 Nếu phương án đó có lợi cho bạn nhưng làm bên khác khó chịu, đó chính là điều game muốn cả bàn nhìn thấy.
               </p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Chọn đáp án sẽ tạo điểm cộng hoặc trừ cho vai của bạn. Sau 5 vòng, tổng điểm vai cao nhất sẽ là bên hưởng lợi nhất.
+              </p>
             </div>
 
             <div>
@@ -316,6 +382,7 @@ function GuestRoundScreen() {
                         <div className="text-sm leading-relaxed text-muted-foreground mt-1">
                           {option.text}
                         </div>
+                        <OptionTradeoffPreview option={option} roleId={roleId} />
                       </div>
                       {isMyVote && (
                         <span className="ml-auto text-primary text-lg shrink-0" aria-hidden="true">✓</span>

@@ -110,6 +110,9 @@ export function FinalScreen() {
               ? "Các vai đã cùng nhau lên đỉnh điểm số — bàn chơi khá cân bằng, không ai bị bỏ lại quá xa."
               : `Vai ${winners[0].role.label} là bên \"win\" nhiều nhất qua chuỗi quyết định của nhóm. Nhưng win cho một vai chưa chắc đồng nghĩa hệ thống cũng đang ổn.`}
           </p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            Vai thắng = tổng Điểm vai (`rolePoints`) cao nhất qua tất cả các vòng.
+          </p>
         </div>
 
         {/* Role leaderboard */}
@@ -179,7 +182,7 @@ export function FinalScreen() {
             })}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Điểm = tổng mức độ vai đó bảo vệ được phần lợi ích của mình qua {GAME_ROUNDS.length} vòng
+            Điểm vai = tổng `rolePoints` mà vai đó tích lũy qua {GAME_ROUNDS.length} vòng
           </p>
         </div>
 
