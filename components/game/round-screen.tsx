@@ -1,20 +1,21 @@
 "use client";
 
-import { useGame } from "@/lib/game-context";
+import { useGame, ROUND_DURATION_SECONDS } from "@/lib/game-context";
 import { GAME_ROUNDS, ROLES, RoleId } from "@/lib/game-data";
 import { IndicatorBar } from "./indicator-bar";
 import { RoleBadge } from "./role-badge";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // ------------------------------------------------------------------
 // Host observer dashboard during a round
 // ------------------------------------------------------------------
 function HostRoundDashboard() {
-  const { state } = useGame();
+  const { state, endRoundNow, dbReady } = useGame();
   const round = GAME_ROUNDS[state.currentRound - 1];
   const votedCount = Object.keys(state.votes).length;
   const totalCount = state.players.length;
-  const pctCountdown = (state.countdown / 30) * 100;
+  const pctCountdown = (state.countdown / ROUND_DURATION_SECONDS) * 100;
   const isUrgent = state.countdown <= 10;
 
   if (!round) return null;
@@ -50,14 +51,24 @@ function HostRoundDashboard() {
                 HOST — Quan sát
               </span>
             </div>
-            <div
-              className={cn(
-                "flex items-center gap-1.5 font-mono font-bold text-lg",
-                isUrgent ? "text-destructive" : "text-foreground"
-              )}
-            >
-              {isUrgent && <span className="w-2 h-2 rounded-full bg-destructive animate-ping" />}
-              {state.countdown}s
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 font-mono font-bold text-lg",
+                  isUrgent ? "text-destructive" : "text-foreground"
+                )}
+              >
+                {isUrgent && <span className="w-2 h-2 rounded-full bg-destructive animate-ping" />}
+                {state.countdown}s
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={endRoundNow}
+                disabled={state.phase !== "round" || !dbReady}
+              >
+                Kết thúc vòng
+              </Button>
             </div>
           </div>
           {/* Countdown bar */}
@@ -203,7 +214,7 @@ function GuestRoundScreen() {
   const myVote = myId ? state.votes[myId] : null;
   const votedCount = Object.keys(state.votes).length;
   const totalCount = state.players.length;
-  const pctCountdown = (state.countdown / 30) * 100;
+  const pctCountdown = (state.countdown / ROUND_DURATION_SECONDS) * 100;
   const isUrgent = state.countdown <= 10;
 
   if (!round) return null;

@@ -36,9 +36,12 @@ interface GameContextValue {
   submitVote: (optionIndex: number) => Promise<void>;
   nextRound: () => Promise<void>;
   restartGame: () => void;
+  endRoundNow: () => Promise<void>;
 }
 
 const defaultIndicators: Indicators = { growth: 5, equity: 5, stability: 5 };
+
+export const ROUND_DURATION_SECONDS = 90;
 
 const defaultState: GameState = {
   roomCode: "",
@@ -50,7 +53,7 @@ const defaultState: GameState = {
   indicators: { ...defaultIndicators },
   votes: {},
   roundHistory: [],
-  countdown: 30,
+  countdown: ROUND_DURATION_SECONDS,
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -183,7 +186,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                   phase: "round",
                   currentRound: room.current_round,
                   votes: {},
-                  countdown: 30,
+                  countdown: ROUND_DURATION_SECONDS,
                 };
               }
               if (prev.phase === "round_result" && prev.currentRound !== room.current_round) {
@@ -193,7 +196,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                   phase: "round",
                   currentRound: room.current_round,
                   votes: {},
-                  countdown: 30,
+                  countdown: ROUND_DURATION_SECONDS,
                 };
               }
               return prev;
@@ -426,7 +429,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         indicators: { ...defaultIndicators },
         votes: {},
         roundHistory: [],
-        countdown: 30,
+        countdown: ROUND_DURATION_SECONDS,
       }));
     } catch (error) {
       console.error("[v0] Error starting game:", error);
@@ -620,7 +623,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         phase: "round",
         currentRound: nextRoundNum,
         votes: {},
-        countdown: 30,
+        countdown: ROUND_DURATION_SECONDS,
       }));
     } catch (error) {
       console.error("[v0] Error moving to next round:", error);
@@ -641,7 +644,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (state.phase === "round") {
       stopCountdown();
-      setState((prev) => ({ ...prev, countdown: 30 }));
+      setState((prev) => ({ ...prev, countdown: ROUND_DURATION_SECONDS }));
 
       countdownRef.current = setInterval(() => {
         setState((prev) => {
@@ -676,6 +679,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         submitVote,
         nextRound,
         restartGame,
+        endRoundNow: resolveVotes,
       }}
     >
       {children}
