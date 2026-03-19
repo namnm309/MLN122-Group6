@@ -9,6 +9,7 @@ import {
   determineRoleEnding,
   computeRoleScores,
   computeSystemScores,
+  getHistoryEffect,
   type RoleId,
 } from "@/lib/game-data";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ export function FinalScreen() {
           {ending.title}
         </h1>
         <p className="text-muted-foreground text-sm text-pretty max-w-sm mx-auto">
-          {ending.subtitle}
+          {ending.description}
         </p>
       </div>
 
@@ -220,10 +221,9 @@ export function FinalScreen() {
           <div className="space-y-2">
             {state.roundHistory.map((hist) => {
               const round = GAME_ROUNDS.find((r) => r.id === hist.roundId);
-              const winOpt = round?.options[hist.winOption];
-              if (!round || !winOpt) return null;
-              const ef = hist.effect;
-              const rp = ef.rolePoints;
+              if (!round) return null;
+              const finalEffect = getHistoryEffect(hist);
+              const rp = finalEffect.rolePoints;
               return (
                 <div key={hist.roundId} className="p-3 rounded-xl bg-card border border-border">
                   <div className="flex items-start gap-3">
@@ -232,11 +232,22 @@ export function FinalScreen() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{round.title}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Phương án <span className="font-mono font-bold text-foreground">{String.fromCharCode(65 + hist.winOption)}</span>
-                        {" — "}{winOpt.text}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {ROLES.map((role) => {
+                          const choiceId = hist.roleChoices[role.id as RoleId];
+                          if (!choiceId) return null;
+                          const option = round.roles[role.id as RoleId].options.find((item) => item.id === choiceId);
+                          if (!option) return null;
+                          return (
+                            <span
+                              key={`${hist.roundId}-${role.id}`}
+                              className="text-[11px] px-1.5 py-0.5 rounded-md border border-border text-muted-foreground bg-background/50"
+                            >
+                              {role.label}: <span className="font-semibold text-foreground">{option.id}</span>
+                            </span>
+                          );
+                        })}
                       </div>
-                      {/* Role impact row */}
                       <div className="flex flex-wrap gap-1 mt-2">
                         {ROLES.map((role) => {
                           const pts = rp?.[role.id as RoleId] ?? 0;
@@ -254,6 +265,24 @@ export function FinalScreen() {
                             </span>
                           );
                         })}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {(hist.synergyApplied ?? []).map((rule) => (
+                          <span
+                            key={`${hist.roundId}-${rule.id}`}
+                            className="text-[11px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20"
+                          >
+                            + {rule.label}
+                          </span>
+                        ))}
+                        {(hist.conflictApplied ?? []).map((rule) => (
+                          <span
+                            key={`${hist.roundId}-${rule.id}`}
+                            className="text-[11px] px-1.5 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20"
+                          >
+                            - {rule.label}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>

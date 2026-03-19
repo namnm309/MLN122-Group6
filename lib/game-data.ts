@@ -224,39 +224,61 @@ export interface SystemEffect {
   conflict: number;
 }
 
-export interface OptionEffect {
+export interface MacroEffect {
   growth: number;
   equity: number;
   stability: number;
+}
+
+export interface RoundEffect extends MacroEffect {
   rolePoints: Record<RoleId, number>;
   system: SystemEffect;
 }
 
-export interface RoundOption {
+export interface PartialRoundEffect extends Partial<MacroEffect> {
+  rolePoints?: Partial<Record<RoleId, number>>;
+  system?: Partial<SystemEffect>;
+}
+
+export interface RoleChoiceOption {
   id: string;
   label: string;
   text: string;
-  style: "growth" | "equity" | "stability" | "control" | "pragmatic" | "extreme";
-  effect: OptionEffect;
+  rolePoints: Partial<Record<RoleId, number>>;
+  macro: Partial<MacroEffect>;
+  system: Partial<SystemEffect>;
 }
 
-export interface RoleContext {
-  state: string;
-  business: string;
-  worker: string;
-  citizen: string;
+export interface RoundRoleConfig {
+  question: string;
+  options: RoleChoiceOption[];
+}
+
+export interface SynergyRule {
+  id: string;
+  label: string;
+  text: string;
+  if: Partial<Record<RoleId, string[]>>;
+  bonus: PartialRoundEffect;
+}
+
+export interface ConflictRule {
+  id: string;
+  label: string;
+  text: string;
+  if: Partial<Record<RoleId, string[]>>;
+  penalty: PartialRoundEffect;
 }
 
 export interface GameRound {
   id: number;
   title: string;
   context: string;
-  roleContext: RoleContext;
-  question: string;
-  options: RoundOption[];
+  roles: Record<RoleId, RoundRoleConfig>;
+  synergyRules: SynergyRule[];
+  conflictRules: ConflictRule[];
   message: string;
   lesson: string;
-  bestOption: number;
 }
 
 export const GAME_ROUNDS: GameRound[] = [
@@ -264,351 +286,1099 @@ export const GAME_ROUNDS: GameRound[] = [
     id: 1,
     title: "Giá năng lượng tăng sốc",
     context:
-      "Giá xăng dầu và điện tăng liên tục, kéo chi phí vận chuyển và giá hàng hóa đi lên. Áp lực chi tiêu hộ gia đình tăng mạnh.",
-    roleContext: {
-      state: "Bạn cần hạ nhiệt lạm phát mà không phá kỷ luật ngân sách.",
-      business: "Biên lợi nhuận giảm, áp lực tăng giá bán rất lớn.",
-      worker: "Thu nhập thực giảm vì chi phí sinh hoạt leo thang.",
-      citizen: "Ngân sách gia đình bị bóp nghẹt, niềm tin tiêu dùng giảm.",
+      "Giá xăng dầu, điện tăng mạnh. Doanh nghiệp méo mặt vì chi phí đội lên, người lao động thấy lương chưa về mà ví đã bay màu, người dân thì mỗi lần đổ xăng như bị critical damage.",
+    roles: {
+      state: {
+        question:
+          "Giá đang nhảy như coin meme, bên Nhà nước chốt bài nào để đỡ sốc mà không phá game?",
+        options: [
+          {
+            id: "A",
+            label: "Giảm chút thuế phí, cứu đúng chỗ",
+            text:
+              "Giảm bớt một phần thuế, phí với xăng dầu/điện và mở gói trợ giá có mục tiêu cho nhóm dễ tổn thương, kèm thời hạn và điều kiện rõ ràng.",
+            rolePoints: { state: 2 },
+            macro: { growth: 1, equity: 2, stability: 2 },
+            system: { rigidity: -1, socialTrust: 2, marketHealth: 1, conflict: -2 },
+          },
+          {
+            id: "B",
+            label: "Thị trường tự bơi",
+            text:
+              "Không can thiệp thuế/phí hay trợ giá, để giá năng lượng tiếp tục do thị trường tự điều chỉnh.",
+            rolePoints: { state: -1 },
+            macro: { growth: 1, equity: -2, stability: -2 },
+            system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
+          },
+          {
+            id: "C",
+            label: "Chặn giá cứng luôn",
+            text:
+              "Đặt trần giá năng lượng áp dụng rộng rãi, buộc doanh nghiệp giữ giá dưới một ngưỡng nhất định trong một thời gian.",
+            rolePoints: { state: -1 },
+            macro: { growth: -2, equity: 1, stability: -1 },
+            system: { rigidity: 2, socialTrust: 0, marketHealth: -2, conflict: 1 },
+          },
+          {
+            id: "D",
+            label: "Thôi ráng, tiền để đầu tư",
+            text:
+              "Không trợ giá trực tiếp, dồn nguồn lực vào đầu tư công và chấp nhận để giá năng lượng cao hơn trong ngắn hạn.",
+            rolePoints: { state: 1 },
+            macro: { growth: 2, equity: -1, stability: -1 },
+            system: { rigidity: 0, socialTrust: -1, marketHealth: 1, conflict: 1 },
+          },
+        ],
+      },
+      business: {
+        question:
+          "Chi phí đầu vào tăng như có ai buff lửa. Doanh nghiệp xử lý sao cho khỏi toang?",
+        options: [
+          {
+            id: "A",
+            label: "Gồng nhẹ, tối ưu vận hành",
+            text:
+              "Tập trung tiết kiệm năng lượng, tối ưu logistics, chưa tăng giá mạnh với khách hàng.",
+            rolePoints: { business: 2 },
+            macro: { growth: 1, equity: 1, stability: 1 },
+            system: { marketHealth: 2, socialTrust: 1, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Pass hết sang khách",
+            text:
+              "Chuyển phần lớn chi phí tăng thêm sang giá bán, chấp nhận khách hàng chịu thiệt.",
+            rolePoints: { business: 1 },
+            macro: { growth: 0, equity: -2, stability: -1 },
+            system: { marketHealth: -1, socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "C",
+            label: "Cắt phúc lợi để giữ lãi",
+            text:
+              "Giảm trợ cấp, siết chi phí lao động và phúc lợi để bảo toàn biên lợi nhuận.",
+            rolePoints: { business: 1 },
+            macro: { growth: 0, equity: -2, stability: -2 },
+            system: { socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "D",
+            label: "Đầu tư công nghệ tiết kiệm điện",
+            text:
+              "Đầu tư công nghệ tiết kiệm năng lượng, chấp nhận đau ngắn hạn để khỏe dài hạn.",
+            rolePoints: { business: 2 },
+            macro: { growth: 2, equity: 0, stability: 1 },
+            system: { marketHealth: 2, socialTrust: 0, conflict: -1 },
+          },
+        ],
+      },
+      worker: {
+        question:
+          "Giá cả tăng mà lương đứng hình. Team lao động phản ứng kiểu nào?",
+        options: [
+          {
+            id: "A",
+            label: "Đòi phụ cấp ngay",
+            text:
+              "Đòi doanh nghiệp chi thêm phụ cấp xăng xe/điện nước để bù chi phí sinh hoạt.",
+            rolePoints: { worker: 2 },
+            macro: { equity: 2, stability: 0 },
+            system: { socialTrust: 0, conflict: 1 },
+          },
+          {
+            id: "B",
+            label: "Thương lượng có lộ trình",
+            text:
+              "Chấp nhận thương lượng theo lộ trình, miễn có cam kết tăng lương/phụ cấp rõ ràng.",
+            rolePoints: { worker: 2 },
+            macro: { growth: 1, equity: 2, stability: 2 },
+            system: { socialTrust: 2, conflict: -1 },
+          },
+          {
+            id: "C",
+            label: "Bùng căng luôn",
+            text:
+              "Nghỉ việc hoặc đình công mạnh để gây áp lực, chấp nhận rủi ro việc làm.",
+            rolePoints: { worker: 1 },
+            macro: { growth: -1, equity: 1, stability: -2 },
+            system: { socialTrust: -1, conflict: 3 },
+          },
+          {
+            id: "D",
+            label: "Cắn răng giữ việc",
+            text:
+              "Tạm thời chấp nhận giữ việc, lùi đòi hỏi lại để chờ thời điểm thuận lợi hơn.",
+            rolePoints: { worker: 0 },
+            macro: { growth: 0, equity: -1, stability: 0 },
+            system: { socialTrust: -1, conflict: 0 },
+          },
+        ],
+      },
+      citizen: {
+        question:
+          "Xăng điện tăng, ví mỏng dần. Người dân chọn mode sinh tồn nào?",
+        options: [
+          {
+            id: "A",
+            label: "Cắt bớt chi tiêu",
+            text:
+              "Cắt giảm các khoản chi không thật sự cần thiết, ưu tiên nhu yếu phẩm.",
+            rolePoints: { citizen: 1 },
+            macro: { growth: -1, stability: 1 },
+            system: { conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Ủng hộ hỗ trợ đúng chỗ",
+            text:
+              "Ủng hộ các chính sách hỗ trợ đúng người đúng lúc, tập trung vào nhóm dễ tổn thương.",
+            rolePoints: { citizen: 2 },
+            macro: { equity: 2, stability: 2 },
+            system: { socialTrust: 2, conflict: -1 },
+          },
+          {
+            id: "C",
+            label: "Ép phải ghìm giá",
+            text:
+              "Đòi hỏi phải ghìm giá hàng loạt, mọi thứ đều phải rẻ, bất chấp chi phí hệ thống.",
+            rolePoints: { citizen: 1 },
+            macro: { equity: 1, stability: -1 },
+            system: { rigidity: 2, marketHealth: -2, conflict: 1 },
+          },
+          {
+            id: "D",
+            label: "Ai mạnh người nấy sống",
+            text:
+              "Không quan tâm tới cơ chế hỗ trợ, chỉ nghĩ tới việc tự lo cho mình.",
+            rolePoints: { citizen: -1 },
+            macro: { equity: -2, stability: -1 },
+            system: { socialTrust: -2, conflict: 1 },
+          },
+        ],
+      },
     },
-    question: "Nhóm nên chốt phương án nào?",
-    options: [
+    synergyRules: [
       {
-        id: "A",
-        label: "A",
-        text: "Giảm một phần thuế phí + trợ giá có mục tiêu",
-        style: "pragmatic",
-        effect: {
-          growth: 1,
-          equity: 2,
-          stability: 2,
-          rolePoints: { state: 2, business: 1, worker: 2, citizen: 2 },
-          system: { rigidity: -1, socialTrust: 2, marketHealth: 1, conflict: -2 },
+        id: "energy-soft-landing",
+        label: "Phối hợp hạ sốc",
+        text:
+          "Nhà nước điều tiết vừa phải, doanh nghiệp không đẩy hết gánh nặng, người lao động thương lượng còn người dân ủng hộ hỗ trợ đúng mục tiêu.",
+        if: {
+          state: ["A"],
+          business: ["A", "D"],
+          worker: ["B"],
+          citizen: ["B"],
         },
-      },
-      {
-        id: "B",
-        label: "B",
-        text: "Để thị trường tự điều chỉnh hoàn toàn",
-        style: "growth",
-        effect: {
+        bonus: {
           growth: 1,
-          equity: -2,
-          stability: -2,
-          rolePoints: { state: -1, business: 2, worker: -2, citizen: -2 },
-          system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
-        },
-      },
-      {
-        id: "C",
-        label: "C",
-        text: "Áp trần giá cứng trên diện rộng",
-        style: "control",
-        effect: {
-          growth: -2,
           equity: 1,
-          stability: -1,
-          rolePoints: { state: -1, business: -2, worker: 1, citizen: 1 },
-          system: { rigidity: 2, socialTrust: 0, marketHealth: -2, conflict: 1 },
+          stability: 2,
+          system: { socialTrust: 2, conflict: -2 },
         },
       },
+    ],
+    conflictRules: [
       {
-        id: "D",
-        label: "D",
-        text: "Ưu tiên đầu tư công, tạm dừng hỗ trợ giá",
-        style: "growth",
-        effect: {
-          growth: 2,
-          equity: -1,
-          stability: -1,
-          rolePoints: { state: 1, business: 2, worker: -1, citizen: -1 },
-          system: { rigidity: 0, socialTrust: -1, marketHealth: 1, conflict: 1 },
+        id: "energy-hard-clash",
+        label: "Ghìm giá, xung đột tăng",
+        text:
+          "Kiểm soát cứng trong khi doanh nghiệp và lao động phản ứng mạnh khiến hệ thống mất ổn định nhanh.",
+        if: {
+          state: ["C"],
+          business: ["B", "C"],
+          worker: ["C"],
+          citizen: ["C"],
+        },
+        penalty: {
+          stability: -2,
+          system: { marketHealth: -2, conflict: 3, rigidity: 2 },
         },
       },
     ],
     message: "Điều tiết khôn ngoan không triệt tiêu thị trường mà làm mềm cú sốc để hệ thống tự cân bằng lại.",
     lesson: "Tăng trưởng ngắn hạn không thể đạt trên chi phí xã hội quá lớn.",
-    bestOption: 0,
   },
   {
     id: 2,
     title: "Mâu thuẫn tiền lương và lợi nhuận",
     context:
-      "Doanh nghiệp nói không đủ sức tăng lương, người lao động đe dọa đình công. Đơn hàng xuất khẩu đến sát hạn.",
-    roleContext: {
-      state: "Cần cơ chế đàm phán có ràng buộc để tránh đứt gãy sản xuất.",
-      business: "Biên lợi nhuận thấp, tăng lương đột ngột có thể buộc cắt nhân sự.",
-      worker: "Thu nhập thực giảm liên tiếp, áp lực đời sống tăng cao.",
-      citizen: "Đứt sản xuất sẽ đẩy giá hàng hóa và thiếu nguồn cung.",
+      "Đơn hàng sát hạn, doanh nghiệp than khó, người lao động bức xúc vì lương không theo kịp giá. Không xử lý khéo là combat ngay tại xưởng.",
+    roles: {
+      state: {
+        question:
+          "Hai bên sắp solo, Nhà nước nhảy vào kiểu gì cho bớt drama?",
+        options: [
+          {
+            id: "A",
+            label: "Khung lộ trình + thưởng năng suất",
+            text:
+              "Ra khung tăng lương theo lộ trình và gắn thưởng năng suất, tạo không gian thương lượng có ràng buộc.",
+            rolePoints: { state: 2 },
+            macro: { growth: 1, equity: 2, stability: 2 },
+            system: { rigidity: -1, socialTrust: 2, marketHealth: 2, conflict: -2 },
+          },
+          {
+            id: "B",
+            label: "Ép tăng lương đồng loạt",
+            text:
+              "Ép tăng lương tối thiểu đồng loạt trong thời gian rất ngắn, ưu tiên dập lửa ngay.",
+            rolePoints: { state: -1 },
+            macro: { growth: -1, equity: 2, stability: -1 },
+            system: { rigidity: 1, marketHealth: -1, conflict: 1 },
+          },
+          {
+            id: "C",
+            label: "Giữ sức DN, lương tính sau",
+            text:
+              "Ưu tiên giữ sức doanh nghiệp, lùi câu chuyện tăng lương lại để bảo vệ đơn hàng.",
+            rolePoints: { state: -1 },
+            macro: { growth: 1, equity: -2, stability: -1 },
+            system: { socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "D",
+            label: "Kệ hai bên tự deal",
+            text:
+              "Không đặt khuôn khổ thương lượng, để doanh nghiệp và người lao động tự xử và tự chịu kết quả.",
+            rolePoints: { state: -1 },
+            macro: { growth: 0, equity: -1, stability: -2 },
+            system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
+          },
+        ],
+      },
+      business: {
+        question:
+          "Nhân sự đang nóng, lợi nhuận thì không phải vô hạn. Doanh nghiệp chốt bài gì?",
+        options: [
+          {
+            id: "A",
+            label: "Tăng từ từ + KPI rõ",
+            text:
+              "Tăng lương từ từ nhưng có KPI thưởng rõ ràng, gắn quyền lợi với hiệu quả.",
+            rolePoints: { business: 2 },
+            macro: { growth: 1, equity: 1, stability: 2 },
+            system: { marketHealth: 2, socialTrust: 1, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Không tăng, giữ đơn hàng",
+            text:
+              "Giữ nguyên lương, ưu tiên giữ giá thành và đơn hàng trong bối cảnh cạnh tranh.",
+            rolePoints: { business: 1 },
+            macro: { growth: 1, equity: -2, stability: -1 },
+            system: { socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "C",
+            label: "Tăng mạnh để dập lửa",
+            text:
+              "Tăng lương nhanh để dập xung đột, chấp nhận biên lợi nhuận ngắn hạn giảm.",
+            rolePoints: { business: 0 },
+            macro: { growth: -1, equity: 2, stability: 0 },
+            system: { marketHealth: -1, conflict: -1 },
+          },
+          {
+            id: "D",
+            label: "Tái cơ cấu, giảm người",
+            text:
+              "Cắt giảm nhân sự để giảm áp lực chi phí, giữ biên lợi nhuận cho phần còn lại.",
+            rolePoints: { business: 0 },
+            macro: { growth: 0, equity: -2, stability: -2 },
+            system: { socialTrust: -2, conflict: 2 },
+          },
+        ],
+      },
+      worker: {
+        question:
+          "Team worker muốn được tôn trọng chứ không muốn thành NPC. Chọn gì?",
+        options: [
+          {
+            id: "A",
+            label: "Đòi tăng ngay",
+            text:
+              "Đòi tăng lương ngay lập tức để bắt kịp chi phí sống.",
+            rolePoints: { worker: 2 },
+            macro: { equity: 2, stability: -1 },
+            system: { conflict: 1 },
+          },
+          {
+            id: "B",
+            label: "Nhận lộ trình + thưởng",
+            text:
+              "Chấp nhận lộ trình tăng lương và thưởng năng suất nếu cam kết đủ rõ.",
+            rolePoints: { worker: 2 },
+            macro: { growth: 1, equity: 2, stability: 2 },
+            system: { socialTrust: 2, conflict: -1 },
+          },
+          {
+            id: "C",
+            label: "Đình công cảnh báo",
+            text:
+              "Tổ chức đình công hoặc cảnh báo để gây sức ép, chấp nhận rủi ro sản xuất.",
+            rolePoints: { worker: 1 },
+            macro: { growth: -1, stability: -2 },
+            system: { conflict: 3 },
+          },
+          {
+            id: "D",
+            label: "Im, giữ việc",
+            text:
+              "Không lên tiếng, ưu tiên giữ việc và tránh xung đột.",
+            rolePoints: { worker: 0 },
+            macro: { equity: -1, stability: 0 },
+            system: { socialTrust: -1 },
+          },
+        ],
+      },
+      citizen: {
+        question:
+          "Người dân đứng ngoài nhìn drama này và nghĩ gì là hợp lý nhất?",
+        options: [
+          {
+            id: "A",
+            label: "Ủng hộ thỏa hiệp đôi bên",
+            text:
+              "Ủng hộ các phương án dung hòa để cả doanh nghiệp lẫn người lao động cùng sống được.",
+            rolePoints: { citizen: 2 },
+            macro: { equity: 1, stability: 2 },
+            system: { socialTrust: 2, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Đứng hẳn về phía lao động",
+            text:
+              "Ủng hộ mạnh mẽ phía người lao động trong yêu cầu tăng lương.",
+            rolePoints: { citizen: 1 },
+            macro: { equity: 2, stability: 0 },
+            system: { conflict: 1 },
+          },
+          {
+            id: "C",
+            label: "Giữ giá hàng cho dân",
+            text:
+              "Ưu tiên giữ giá hàng hóa, không muốn doanh nghiệp đẩy chi phí sang người tiêu dùng.",
+            rolePoints: { citizen: 1 },
+            macro: { growth: 0, equity: 1, stability: 1 },
+            system: { marketHealth: 1 },
+          },
+          {
+            id: "D",
+            label: "Miễn rẻ là được",
+            text:
+              "Không quan tâm phía nào, miễn giá cuối cùng rẻ là được.",
+            rolePoints: { citizen: -1 },
+            macro: { equity: -1 },
+            system: { socialTrust: -1 },
+          },
+        ],
+      },
     },
-    question: "Giải pháp nào giúp hạ nhiệt xung đột lợi ích?",
-    options: [
+    synergyRules: [
       {
-        id: "A",
-        label: "A",
-        text: "Lộ trình tăng lương + thưởng năng suất + hỗ trợ có điều kiện",
-        style: "pragmatic",
-        effect: {
+        id: "wage-negotiated-balance",
+        label: "Thương lượng có neo",
+        text:
+          "Khi Nhà nước tạo khung, doanh nghiệp tăng theo lộ trình và lao động chấp nhận cơ chế thưởng, hệ thống dễ ổn định hơn.",
+        if: {
+          state: ["A"],
+          business: ["A"],
+          worker: ["B"],
+          citizen: ["A", "C"],
+        },
+        bonus: {
           growth: 1,
-          equity: 2,
+          equity: 1,
           stability: 2,
-          rolePoints: { state: 2, business: 1, worker: 2, citizen: 1 },
-          system: { rigidity: -1, socialTrust: 2, marketHealth: 2, conflict: -2 },
+          system: { socialTrust: 2, marketHealth: 1, conflict: -2 },
         },
       },
+    ],
+    conflictRules: [
       {
-        id: "B",
-        label: "B",
-        text: "Buộc tăng lương ngay trên diện rộng",
-        style: "equity",
-        effect: {
-          growth: -1,
-          equity: 2,
-          stability: -1,
-          rolePoints: { state: -1, business: -2, worker: 2, citizen: 1 },
-          system: { rigidity: 1, socialTrust: 0, marketHealth: -1, conflict: 1 },
+        id: "wage-free-for-all",
+        label: "Mặc ai nấy xoay",
+        text:
+          "Nếu Nhà nước đứng ngoài, doanh nghiệp cứng và lao động bùng nổ thì xung đột tăng rất nhanh.",
+        if: {
+          state: ["D"],
+          business: ["B"],
+          worker: ["C"],
+          citizen: ["D"],
         },
-      },
-      {
-        id: "C",
-        label: "C",
-        text: "Đóng băng lương để giữ cạnh tranh",
-        style: "growth",
-        effect: {
-          growth: 1,
-          equity: -2,
-          stability: -1,
-          rolePoints: { state: -1, business: 2, worker: -2, citizen: -1 },
-          system: { rigidity: 0, socialTrust: -2, marketHealth: 0, conflict: 2 },
-        },
-      },
-      {
-        id: "D",
-        label: "D",
-        text: "Để hai bên tự xử, nhà nước đứng ngoài",
-        style: "extreme",
-        effect: {
-          growth: 0,
-          equity: -1,
-          stability: -2,
-          rolePoints: { state: -1, business: 0, worker: -2, citizen: -1 },
-          system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
+        penalty: {
+          stability: -3,
+          system: { socialTrust: -2, conflict: 3 },
         },
       },
     ],
     message: "Mâu thuẫn lợi ích cần cơ chế đàm phán minh bạch, không thể xử lý bằng mệnh lệnh một chiều.",
     lesson: "Lợi ích của bên này thường là chi phí của bên kia nếu thiếu thiết kế thể chế.",
-    bestOption: 0,
   },
   {
     id: 3,
     title: "Nông sản ùn tắc, chuỗi cung ứng đứt",
     context:
-      "Nông sản vào vụ lớn nhưng tiêu thụ chậm, giá tại nguồn rớt mạnh. Người sản xuất chịu thiệt nặng.",
-    roleContext: {
-      state: "Cần sửa điểm nghẽn lưu thông thay vì cứu trợ dàn trải.",
-      business: "Nếu có chia sẻ rủi ro logistics, doanh nghiệp có thể mở thêm kênh phân phối.",
-      worker: "Lao động thời vụ mất việc nếu chuỗi tiêu thụ tiếp tục nghẽn.",
-      citizen: "Giá đến tay người mua vẫn cao dù giá tại vườn rẻ.",
+      "Nông sản vào vụ mà đầu ra nghẽn, giá tại nguồn rớt mạnh. Người sản xuất nhìn hàng đầy kho mà chỉ biết thở dài kiểu game này khó quá.",
+    roles: {
+      state: {
+        question:
+          "Nông sản đang kẹt cứng, Nhà nước mở map kiểu nào?",
+        options: [
+          {
+            id: "A",
+            label: "Logistics + sàn số + tín dụng",
+            text:
+              "Ưu tiên tháo điểm nghẽn bằng cách hỗ trợ logistics, kết nối nông dân với sàn thương mại số và mở gói tín dụng ngắn hạn cho khâu thu mua và phân phối.",
+            rolePoints: { state: 2 },
+            macro: { growth: 2, equity: 2, stability: 1 },
+            system: { rigidity: -1, socialTrust: 1, marketHealth: 2, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Nhà nước mua vào kéo dài",
+            text:
+              "Nhà nước đứng ra mua tạm trữ nông sản trong thời gian dài, dùng ngân sách để đỡ giá.",
+            rolePoints: { state: -1 },
+            macro: { growth: -1, equity: 1, stability: 0 },
+            system: { rigidity: 2, marketHealth: -1 },
+          },
+          {
+            id: "C",
+            label: "Bảo hộ, dựng rào",
+            text:
+              "Đặt các biện pháp bảo hộ, hạn chế cạnh tranh và nhập khẩu để ưu tiên tiêu thụ nông sản trong nước.",
+            rolePoints: { state: -1 },
+            macro: { growth: -1, equity: 0, stability: -1 },
+            system: { rigidity: 1, socialTrust: -1, marketHealth: -2, conflict: 1 },
+          },
+          {
+            id: "D",
+            label: "Thị trường tự xử",
+            text:
+              "Không triển khai hỗ trợ đặc biệt, để chuỗi cung ứng và giá cả tự điều chỉnh.",
+            rolePoints: { state: -1 },
+            macro: { growth: -1, equity: -2, stability: -1 },
+            system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
+          },
+        ],
+      },
+      business: {
+        question:
+          "Hàng đang rẻ, nguồn đang nhiều. Doanh nghiệp xử sao để vừa ăn được vừa không bị chửi?",
+        options: [
+          {
+            id: "A",
+            label: "Thu mua + sơ chế + kho lạnh",
+            text:
+              "Mở thu mua, đầu tư sơ chế và kho lạnh để giữ giá trị nông sản.",
+            rolePoints: { business: 2 },
+            macro: { growth: 2, equity: 1, stability: 1 },
+            system: { marketHealth: 2, socialTrust: 1 },
+          },
+          {
+            id: "B",
+            label: "Ép giá mạnh",
+            text:
+              "Tận dụng lúc nông dân yếu thế để ép giá sâu, tối đa hóa biên lợi nhuận.",
+            rolePoints: { business: 1 },
+            macro: { growth: 1, equity: -2, stability: -1 },
+            system: { socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "C",
+            label: "Đẩy bán qua sàn",
+            text:
+              "Đẩy mạnh bán qua sàn online và kênh trực tiếp, rút ngắn trung gian.",
+            rolePoints: { business: 2 },
+            macro: { growth: 2, equity: 1, stability: 1 },
+            system: { marketHealth: 2 },
+          },
+          {
+            id: "D",
+            label: "Đứng ngoài, đợi rẻ nữa",
+            text:
+              "Tạm thời không nhập thêm, chờ giá xuống sâu hơn rồi mới quay lại.",
+            rolePoints: { business: 0 },
+            macro: { growth: -1, equity: -1, stability: -1 },
+            system: { socialTrust: -1 },
+          },
+        ],
+      },
+      worker: {
+        question:
+          "Team lao động trong chuỗi cung ứng làm gì để không bị cuốn theo cơn lag toàn hệ?",
+        options: [
+          {
+            id: "A",
+            label: "Tăng ca, bốc xếp, phân loại",
+            text:
+              "Sẵn sàng tăng ca, hỗ trợ bốc xếp và phân loại để đẩy hàng ra nhanh hơn.",
+            rolePoints: { worker: 2 },
+            macro: { growth: 1, stability: 1 },
+            system: { marketHealth: 1 },
+          },
+          {
+            id: "B",
+            label: "Đòi thêm tiền công",
+            text:
+              "Yêu cầu trả thêm tiền công vì khối lượng việc tăng mạnh.",
+            rolePoints: { worker: 2 },
+            macro: { equity: 2, stability: 0 },
+            system: { conflict: 1 },
+          },
+          {
+            id: "C",
+            label: "Không rõ quyền lợi thì nghỉ",
+            text:
+              "Nếu không có quyền lợi rõ ràng, chấp nhận nghỉ việc, bỏ khỏi chuỗi.",
+            rolePoints: { worker: 1 },
+            macro: { growth: -1, stability: -2 },
+            system: { conflict: 2 },
+          },
+          {
+            id: "D",
+            label: "Học thêm kỹ năng bán, sàn số",
+            text:
+              "Đầu tư học thêm kỹ năng bán hàng và sử dụng sàn số để không bị lệ thuộc.",
+            rolePoints: { worker: 2 },
+            macro: { growth: 1, equity: 1, stability: 1 },
+            system: { marketHealth: 1, socialTrust: 1 },
+          },
+        ],
+      },
+      citizen: {
+        question:
+          "Nông sản rẻ mà nông dân vẫn khổ. Người dân phản ứng sao cho có tình có lý?",
+        options: [
+          {
+            id: "A",
+            label: "Mua ủng hộ, chọn kênh minh bạch",
+            text:
+              "Ưu tiên mua nông sản nội địa qua kênh minh bạch, chấp nhận bớt săn siêu rẻ.",
+            rolePoints: { citizen: 2 },
+            macro: { growth: 1, equity: 1, stability: 1 },
+            system: { socialTrust: 1, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Săn rẻ hết cỡ",
+            text:
+              "Chỉ quan tâm giá rẻ nhất, ép giá tối đa.",
+            rolePoints: { citizen: 0 },
+            macro: { equity: -1 },
+            system: { socialTrust: -1 },
+          },
+          {
+            id: "C",
+            label: "Ủng hộ bán qua sàn",
+            text:
+              "Ưu tiên mua hàng qua sàn có truy xuất nguồn gốc rõ ràng.",
+            rolePoints: { citizen: 2 },
+            macro: { growth: 1, equity: 1, stability: 1 },
+            system: { marketHealth: 2, socialTrust: 1 },
+          },
+          {
+            id: "D",
+            label: "Kệ, chuyện của nhà sản xuất",
+            text:
+              "Không quan tâm đến câu chuyện đằng sau giá, chỉ mua theo thói quen.",
+            rolePoints: { citizen: -1 },
+            macro: { equity: -1, stability: -1 },
+            system: { socialTrust: -1 },
+          },
+        ],
+      },
     },
-    question: "Phương án nào phù hợp nhất?",
-    options: [
+    synergyRules: [
       {
-        id: "A",
-        label: "A",
-        text: "Kết nối logistics, sàn số và tín dụng ngắn hạn",
-        style: "pragmatic",
-        effect: {
+        id: "agri-open-flow",
+        label: "Mở nút thắt chuỗi cung ứng",
+        text:
+          "Khi cả 4 vai cùng chọn hướng thông dòng chảy hàng hóa, hiệu quả và công bằng cùng được cải thiện.",
+        if: {
+          state: ["A"],
+          business: ["A", "C"],
+          worker: ["A", "D"],
+          citizen: ["A", "C"],
+        },
+        bonus: {
           growth: 2,
-          equity: 2,
-          stability: 1,
-          rolePoints: { state: 2, business: 2, worker: 2, citizen: 1 },
-          system: { rigidity: -1, socialTrust: 1, marketHealth: 2, conflict: -1 },
-        },
-      },
-      {
-        id: "B",
-        label: "B",
-        text: "Nhà nước mua vào kéo dài",
-        style: "control",
-        effect: {
-          growth: -1,
           equity: 1,
-          stability: 0,
-          rolePoints: { state: -2, business: -1, worker: 1, citizen: 1 },
-          system: { rigidity: 2, socialTrust: 0, marketHealth: -1, conflict: 0 },
+          stability: 1,
+          system: { marketHealth: 2, socialTrust: 1, conflict: -1 },
         },
       },
+    ],
+    conflictRules: [
       {
-        id: "C",
-        label: "C",
-        text: "Bảo hộ bằng hạn chế cạnh tranh",
-        style: "control",
-        effect: {
-          growth: -1,
-          equity: 0,
-          stability: -1,
-          rolePoints: { state: -1, business: 1, worker: 0, citizen: -1 },
-          system: { rigidity: 1, socialTrust: -1, marketHealth: -2, conflict: 1 },
+        id: "agri-everyone-for-self",
+        label: "Mạnh ai nấy né",
+        text:
+          "Nếu các bên đều né trách nhiệm, chuỗi cung ứng càng tắc và niềm tin tụt tiếp.",
+        if: {
+          state: ["D"],
+          business: ["B", "D"],
+          worker: ["C"],
+          citizen: ["B", "D"],
         },
-      },
-      {
-        id: "D",
-        label: "D",
-        text: "Không can thiệp",
-        style: "extreme",
-        effect: {
-          growth: -1,
+        penalty: {
+          growth: -2,
           equity: -2,
-          stability: -1,
-          rolePoints: { state: -1, business: 0, worker: -2, citizen: -1 },
-          system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
+          stability: -2,
+          system: { socialTrust: -2, conflict: 2 },
         },
       },
     ],
     message: "Hỗ trợ đúng là sửa điểm nghẽn thị trường chứ không bao cấp vô hạn.",
     lesson: "Công bằng và hiệu quả có thể đi cùng nhau nếu chọn đúng điểm can thiệp.",
-    bestOption: 0,
   },
   {
     id: 4,
     title: "Niềm tin thị trường suy giảm",
     context:
-      "Xuất hiện hàng loạt vụ gian lận chất lượng và thao túng thông tin, người tiêu dùng giảm chi tiêu mạnh.",
-    roleContext: {
-      state: "Nếu niềm tin mất, chi phí điều tiết và giám sát sẽ tăng theo cấp số nhân.",
-      business: "Doanh nghiệp làm ăn tử tế bị cạnh tranh bởi bên lách luật.",
-      worker: "Đơn hàng giảm làm rủi ro việc làm tăng.",
-      citizen: "Người dân cần cơ chế bảo vệ quyền lợi rõ ràng.",
+      "Gian lận chất lượng, thổi thông tin, làm ăn nhập nhèm khiến người tiêu dùng mất niềm tin. Thị trường bắt đầu kiểu: không biết tin ai nữa luôn.",
+    roles: {
+      state: {
+        question:
+          "Thị trường đang mất trust, Nhà nước bật mode nào?",
+        options: [
+          {
+            id: "A",
+            label: "Siết luật + công khai + xử nghiêm",
+            text:
+              "Hoàn thiện pháp lý, công khai dữ liệu giám sát và xử lý nghiêm minh các vụ sai phạm.",
+            rolePoints: { state: 2 },
+            macro: { growth: 1, equity: 2, stability: 2 },
+            system: { socialTrust: 2, marketHealth: 2, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Đâu cháy dập chỗ đó",
+            text:
+              "Không thay đổi khung lớn, chỉ xử lý từng vụ việc phát sinh.",
+            rolePoints: { state: 0 },
+            macro: { growth: 0, equity: 0, stability: -1 },
+            system: { socialTrust: -1, marketHealth: -1, conflict: 1 },
+          },
+          {
+            id: "C",
+            label: "Nới tay cho DN đỡ mệt",
+            text:
+              "Nới lỏng kiểm tra và tiêu chuẩn một thời gian để giảm áp lực cho doanh nghiệp.",
+            rolePoints: { state: -2 },
+            macro: { growth: 1, equity: -2, stability: -2 },
+            system: { rigidity: -1, socialTrust: -2, marketHealth: -2, conflict: 2 },
+          },
+          {
+            id: "D",
+            label: "Siết hành chính diện rộng",
+            text:
+              "Tăng mạnh kiểm tra hành chính, áp thêm nhiều thủ tục và chế tài.",
+            rolePoints: { state: -1 },
+            macro: { growth: -2, equity: 0, stability: -1 },
+            system: { rigidity: 2, socialTrust: -1, marketHealth: -1, conflict: 1 },
+          },
+        ],
+      },
+      business: {
+        question:
+          "Thị trường đang nghi ngờ tất cả. Doanh nghiệp chơi bài gì để cứu danh tiếng?",
+        options: [
+          {
+            id: "A",
+            label: "Minh bạch full stack",
+            text:
+              "Minh bạch nguồn gốc, chất lượng, dữ liệu sản xuất và phân phối.",
+            rolePoints: { business: 2 },
+            macro: { growth: 1, equity: 1, stability: 2 },
+            system: { socialTrust: 2, marketHealth: 2 },
+          },
+          {
+            id: "B",
+            label: "PR mạnh, bên trong tính sau",
+            text:
+              "Đầu tư vào truyền thông hơn là sửa chất lượng thật sự.",
+            rolePoints: { business: 0 },
+            macro: { growth: 0, stability: -1 },
+            system: { socialTrust: -2, conflict: 1 },
+          },
+          {
+            id: "C",
+            label: "Giảm chi phí kiểm soát chất lượng",
+            text:
+              "Tối giản khâu kiểm soát chất lượng để giảm chi phí.",
+            rolePoints: { business: 1 },
+            macro: { growth: 1, equity: -2, stability: -2 },
+            system: { marketHealth: -2, socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "D",
+            label: "Tự xây bộ chuẩn + bên thứ ba",
+            text:
+              "Tự xây bộ chuẩn và mời bên thứ ba kiểm định để tăng niềm tin.",
+            rolePoints: { business: 2 },
+            macro: { growth: 1, equity: 1, stability: 2 },
+            system: { socialTrust: 2, marketHealth: 2 },
+          },
+        ],
+      },
+      worker: {
+        question:
+          "Nếu thấy sai phạm trong chuỗi làm việc, worker xử lý sao?",
+        options: [
+          {
+            id: "A",
+            label: "Báo nội bộ, yêu cầu sửa",
+            text:
+              "Báo cáo nội bộ và yêu cầu sửa quy trình khi phát hiện sai phạm.",
+            rolePoints: { worker: 2 },
+            macro: { stability: 1 },
+            system: { socialTrust: 1, conflict: -1 },
+          },
+          {
+            id: "B",
+            label: "Im lặng cho lành",
+            text:
+              "Im lặng, coi như không thấy để tránh rắc rối.",
+            rolePoints: { worker: 0 },
+            macro: { equity: -1, stability: -1 },
+            system: { socialTrust: -1 },
+          },
+          {
+            id: "C",
+            label: "Tố giác sai phạm nặng",
+            text:
+              "Tố giác ra bên ngoài khi sai phạm nghiêm trọng.",
+            rolePoints: { worker: 2 },
+            macro: { equity: 1, stability: 1 },
+            system: { socialTrust: 2, conflict: 0 },
+          },
+          {
+            id: "D",
+            label: "Kệ, miễn có lương",
+            text:
+              "Không quan tâm tới hệ quả, miễn cuối tháng nhận lương.",
+            rolePoints: { worker: -1 },
+            macro: { equity: -1 },
+            system: { socialTrust: -2 },
+          },
+        ],
+      },
+      citizen: {
+        question:
+          "Người dân nên phản ứng sao khi niềm tin thị trường tụt đáy?",
+        options: [
+          {
+            id: "A",
+            label: "Ưu tiên hàng minh bạch",
+            text:
+              "Ưu tiên mua hàng có nguồn gốc rõ ràng, minh bạch.",
+            rolePoints: { citizen: 2 },
+            macro: { growth: 1, stability: 1 },
+            system: { socialTrust: 1, marketHealth: 1 },
+          },
+          {
+            id: "B",
+            label: "Tẩy chay bên làm láo",
+            text:
+              "Tẩy chay các doanh nghiệp gian lận, ủng hộ bên làm tử tế.",
+            rolePoints: { citizen: 2 },
+            macro: { equity: 1, stability: 1 },
+            system: { socialTrust: 1, conflict: 0 },
+          },
+          {
+            id: "C",
+            label: "Ham rẻ bất chấp",
+            text:
+              "Chọn rẻ bằng mọi giá, không quan tâm chất lượng hay nguồn gốc.",
+            rolePoints: { citizen: -1 },
+            macro: { equity: -1, stability: -1 },
+            system: { marketHealth: -1, socialTrust: -1 },
+          },
+          {
+            id: "D",
+            label: "Tin review mạng là đủ",
+            text:
+              "Chỉ tin review mạng, không kiểm chứng thêm.",
+            rolePoints: { citizen: 0 },
+            macro: { stability: -1 },
+            system: { socialTrust: -1, conflict: 1 },
+          },
+        ],
+      },
     },
-    question: "Nên ưu tiên giải pháp nào?",
-    options: [
+    synergyRules: [
       {
-        id: "A",
-        label: "A",
-        text: "Hoàn thiện pháp lý + công khai dữ liệu giám sát + xử lý nghiêm",
-        style: "stability",
-        effect: {
+        id: "trust-rebuild",
+        label: "Khôi phục niềm tin",
+        text:
+          "Nhà nước siết đúng chỗ, doanh nghiệp minh bạch, lao động dám báo sai phạm và người dân tiêu dùng thông minh sẽ kéo niềm tin thị trường đi lên.",
+        if: {
+          state: ["A"],
+          business: ["A", "D"],
+          worker: ["A", "C"],
+          citizen: ["A", "B"],
+        },
+        bonus: {
           growth: 1,
-          equity: 2,
+          equity: 1,
           stability: 2,
-          rolePoints: { state: 2, business: 1, worker: 2, citizen: 2 },
-          system: { rigidity: 0, socialTrust: 2, marketHealth: 2, conflict: -1 },
+          system: { socialTrust: 3, marketHealth: 2, conflict: -1 },
         },
       },
+    ],
+    conflictRules: [
       {
-        id: "B",
-        label: "B",
-        text: "Chỉ xử lý từng vụ việc phát sinh",
-        style: "pragmatic",
-        effect: {
-          growth: 0,
-          equity: 0,
-          stability: -1,
-          rolePoints: { state: 0, business: 1, worker: -1, citizen: -1 },
-          system: { rigidity: 0, socialTrust: -1, marketHealth: -1, conflict: 1 },
+        id: "trust-collapse",
+        label: "Mất trust dây chuyền",
+        text:
+          "Khi quản lý lệch pha với doanh nghiệp làm ẩu, người lao động im lặng và người dân chọn bừa, niềm tin tụt rất nhanh.",
+        if: {
+          state: ["C", "D"],
+          business: ["B", "C"],
+          worker: ["B", "D"],
+          citizen: ["C", "D"],
         },
-      },
-      {
-        id: "C",
-        label: "C",
-        text: "Nới tay để giảm áp lực cho doanh nghiệp",
-        style: "growth",
-        effect: {
-          growth: 1,
-          equity: -2,
+        penalty: {
           stability: -2,
-          rolePoints: { state: -2, business: 2, worker: -2, citizen: -2 },
-          system: { rigidity: -1, socialTrust: -2, marketHealth: -2, conflict: 2 },
-        },
-      },
-      {
-        id: "D",
-        label: "D",
-        text: "Siết hành chính diện rộng",
-        style: "control",
-        effect: {
-          growth: -2,
-          equity: 0,
-          stability: -1,
-          rolePoints: { state: -1, business: -2, worker: 0, citizen: 0 },
-          system: { rigidity: 2, socialTrust: -1, marketHealth: -1, conflict: 1 },
+          system: { socialTrust: -3, marketHealth: -2, conflict: 2 },
         },
       },
     ],
     message: "Thị trường chỉ bền khi tự do đi cùng kỷ cương và minh bạch.",
     lesson: "Hoàn thiện thể chế là điều kiện để cạnh tranh công bằng.",
-    bestOption: 0,
   },
   {
     id: 5,
     title: "Chốt gói định hướng 3 năm",
     context:
-      "Bàn chơi phải chọn một gói chính sách tổng hợp để đi qua chu kỳ tới mà không đánh mất cân bằng xã hội.",
-    roleContext: {
-      state: "Bạn phải giữ cả tăng trưởng, công bằng và ổn định trong một cấu hình khả thi.",
-      business: "Cần môi trường dự đoán được để đầu tư dài hạn.",
-      worker: "Cần lộ trình thu nhập và an sinh không bị bỏ lại.",
-      citizen: "Cần giá cả hợp lý, việc làm bền và dịch vụ công tin cậy.",
+      "Sau 4 vòng sóng gió, giờ là lúc chốt định hướng 3 năm tới. Không chỉ là tăng trưởng, mà còn là câu chuyện xã hội có cân bằng không, niềm tin còn giữ được không.",
+    roles: {
+      state: {
+        question:
+          "Nếu phải chốt một hướng lớn cho 3 năm tới, Nhà nước pick gì?",
+        options: [
+          {
+            id: "A",
+            label: "Tăng trưởng thần tốc",
+            text:
+              "Ưu tiên tối đa cho tăng trưởng kinh tế, chấp nhận nới lỏng chuẩn công bằng và an sinh.",
+            rolePoints: { state: -1 },
+            macro: { growth: 2, equity: -2, stability: -1 },
+            system: { socialTrust: -2, conflict: 2 },
+          },
+          {
+            id: "B",
+            label: "An sinh ngắn hạn là số 1",
+            text:
+              "Đặt trọng tâm vào mở rộng an sinh và hỗ trợ thu nhập trong ngắn hạn.",
+            rolePoints: { state: 0 },
+            macro: { growth: -1, equity: 2, stability: 0 },
+            system: { rigidity: 1, socialTrust: 1, marketHealth: -1 },
+          },
+          {
+            id: "C",
+            label: "Gói cân bằng ba mục tiêu",
+            text:
+              "Cân bằng: nâng năng suất, an sinh mục tiêu và kỷ cương thị trường.",
+            rolePoints: { state: 2 },
+            macro: { growth: 2, equity: 2, stability: 2 },
+            system: { socialTrust: 2, marketHealth: 2, conflict: -2 },
+          },
+          {
+            id: "D",
+            label: "Quản thật chặt cho chắc",
+            text:
+              "Tăng cường quản lý hành chính và kiểm soát mạnh để giữ trật tự.",
+            rolePoints: { state: 0 },
+            macro: { growth: -1, equity: -1, stability: 1 },
+            system: { rigidity: 2, socialTrust: -1, marketHealth: -2, conflict: 1 },
+          },
+        ],
+      },
+      business: {
+        question:
+          "Doanh nghiệp muốn 3 năm tới sống khỏe kiểu nào?",
+        options: [
+          {
+            id: "A",
+            label: "Bơm tốc độ, chạy trước",
+            text:
+              "Đẩy mạnh tăng trưởng doanh thu và mở rộng thị trường càng nhanh càng tốt.",
+            rolePoints: { business: 2 },
+            macro: { growth: 2, equity: -2, stability: -1 },
+            system: { socialTrust: -1, conflict: 1 },
+          },
+          {
+            id: "B",
+            label: "Xin hỗ trợ nhiều cho an toàn",
+            text:
+              "Ưu tiên xin các gói hỗ trợ để giảm rủi ro kinh doanh.",
+            rolePoints: { business: 0 },
+            macro: { growth: 0, equity: 0, stability: 0 },
+            system: { rigidity: 1, marketHealth: -1 },
+          },
+          {
+            id: "C",
+            label: "Đầu tư năng suất, minh bạch",
+            text:
+              "Đầu tư vào công nghệ, con người và quản trị để cạnh tranh tử tế, minh bạch lâu dài.",
+            rolePoints: { business: 2 },
+            macro: { growth: 2, equity: 1, stability: 2 },
+            system: { socialTrust: 2, marketHealth: 2 },
+          },
+          {
+            id: "D",
+            label: "Xin bảo hộ để đỡ đau",
+            text:
+              "Xin thêm cơ chế bảo hộ, hạn chế cạnh tranh để giảm áp lực.",
+            rolePoints: { business: 1 },
+            macro: { growth: 0, equity: -1, stability: 0 },
+            system: { rigidity: 2, marketHealth: -2 },
+          },
+        ],
+      },
+      worker: {
+        question:
+          "Worker muốn tương lai 3 năm tới theo vibe nào?",
+        options: [
+          {
+            id: "A",
+            label: "Miễn có việc là được",
+            text:
+              "Ưu tiên việc làm ổn định, chấp nhận quyền lợi chưa tối ưu.",
+            rolePoints: { worker: 0 },
+            macro: { growth: 1, equity: -2, stability: -1 },
+            system: { socialTrust: -1 },
+          },
+          {
+            id: "B",
+            label: "Phúc lợi trước mắt",
+            text:
+              "Ưu tiên phúc lợi và hỗ trợ hiện tại, chấp nhận tăng trưởng chậm hơn.",
+            rolePoints: { worker: 2 },
+            macro: { growth: -1, equity: 2, stability: 0 },
+            system: { socialTrust: 1 },
+          },
+          {
+            id: "C",
+            label: "Lương, kỹ năng, cơ hội cùng lên",
+            text:
+              "Muốn vừa nâng lương, vừa nâng kỹ năng và cơ hội thăng tiến.",
+            rolePoints: { worker: 2 },
+            macro: { growth: 2, equity: 2, stability: 2 },
+            system: { socialTrust: 2, conflict: -1 },
+          },
+          {
+            id: "D",
+            label: "Quản chặt để đỡ bất ổn",
+            text:
+              "Chấp nhận thêm kiểm soát để bớt loạn, dù cơ hội có thể hẹp hơn.",
+            rolePoints: { worker: 0 },
+            macro: { stability: 1, equity: -1 },
+            system: { rigidity: 2, marketHealth: -1 },
+          },
+        ],
+      },
+      citizen: {
+        question:
+          "Nếu phải vote cho một tương lai 3 năm tới, người dân chọn gói nào?",
+        options: [
+          {
+            id: "A",
+            label: "Miễn kinh tế chạy mạnh",
+            text:
+              "Chấp nhận chịu thiệt ít nhiều miễn kinh tế chạy nhanh.",
+            rolePoints: { citizen: 0 },
+            macro: { growth: 2, equity: -2, stability: -1 },
+            system: { socialTrust: -1, conflict: 1 },
+          },
+          {
+            id: "B",
+            label: "Đỡ khổ trước đã",
+            text:
+              "Ưu tiên chính sách giúp đỡ nhóm đang khó khăn trong ngắn hạn.",
+            rolePoints: { citizen: 2 },
+            macro: { growth: -1, equity: 2, stability: 0 },
+            system: { socialTrust: 1 },
+          },
+          {
+            id: "C",
+            label: "Tăng trưởng nhưng phải công bằng",
+            text:
+              "Muốn tăng trưởng nhưng đi kèm công bằng và đáng tin, không bỏ ai lại phía sau.",
+            rolePoints: { citizen: 2 },
+            macro: { growth: 2, equity: 2, stability: 2 },
+            system: { socialTrust: 2, marketHealth: 2, conflict: -2 },
+          },
+          {
+            id: "D",
+            label: "Kiểm soát mạnh cho chắc cú",
+            text:
+              "Ủng hộ kiểm soát mạnh để tránh sốc, dù cơ hội có thể ít hơn.",
+            rolePoints: { citizen: 0 },
+            macro: { stability: 1, equity: -1 },
+            system: { rigidity: 2, marketHealth: -2 },
+          },
+        ],
+      },
     },
-    question: "Nhóm nên thông qua gói nào?",
-    options: [
+    synergyRules: [
       {
-        id: "A",
-        label: "A",
-        text: "Tăng trưởng bằng mọi giá",
-        style: "growth",
-        effect: {
-          growth: 2,
-          equity: -2,
-          stability: -1,
-          rolePoints: { state: -1, business: 2, worker: -1, citizen: -2 },
-          system: { rigidity: -1, socialTrust: -2, marketHealth: 0, conflict: 2 },
+        id: "three-year-balanced-growth",
+        label: "Đồng thuận cân bằng",
+        text:
+          "Khi cả 4 vai cùng chấp nhận bài toán tăng trưởng đi cùng công bằng và kỷ cương, hệ thống đạt trạng thái đẹp nhất.",
+        if: {
+          state: ["C"],
+          business: ["C"],
+          worker: ["C"],
+          citizen: ["C"],
         },
-      },
-      {
-        id: "B",
-        label: "B",
-        text: "An sinh ngắn hạn là trung tâm",
-        style: "equity",
-        effect: {
-          growth: -1,
-          equity: 2,
-          stability: 0,
-          rolePoints: { state: -1, business: -2, worker: 2, citizen: 2 },
-          system: { rigidity: 1, socialTrust: 1, marketHealth: -1, conflict: 0 },
-        },
-      },
-      {
-        id: "C",
-        label: "C",
-        text: "Gói cân bằng: năng suất + an sinh mục tiêu + kỷ cương thị trường",
-        style: "pragmatic",
-        effect: {
+        bonus: {
           growth: 2,
           equity: 2,
           stability: 2,
-          rolePoints: { state: 2, business: 2, worker: 2, citizen: 2 },
-          system: { rigidity: 0, socialTrust: 2, marketHealth: 2, conflict: -2 },
+          system: { socialTrust: 3, marketHealth: 2, conflict: -3 },
+        },
+      },
+    ],
+    conflictRules: [
+      {
+        id: "growth-vs-protection",
+        label: "Tăng trưởng vọt nhưng xã hội lệch pha",
+        text:
+          "Khi Nhà nước và doanh nghiệp lao lên tăng trưởng còn lao động và người dân đòi bù đắp mạnh, hệ thống khó giữ ổn định.",
+        if: {
+          state: ["A"],
+          business: ["A"],
+          worker: ["B"],
+          citizen: ["B"],
+        },
+        penalty: {
+          stability: -2,
+          system: { socialTrust: -2, conflict: 2 },
         },
       },
       {
-        id: "D",
-        label: "D",
-        text: "Kiểm soát hành chính mạnh để giữ trật tự",
-        style: "control",
-        effect: {
-          growth: -1,
-          equity: -1,
-          stability: 1,
-          rolePoints: { state: 0, business: -2, worker: -1, citizen: -1 },
-          system: { rigidity: 2, socialTrust: -1, marketHealth: -2, conflict: 1 },
+        id: "locked-economy",
+        label: "Khóa cứng toàn hệ",
+        text:
+          "Nếu cả 4 vai cùng nghiêng về kiểm soát cứng, thị trường sẽ thiếu động lực phát triển.",
+        if: {
+          state: ["D"],
+          business: ["D"],
+          worker: ["D"],
+          citizen: ["D"],
+        },
+        penalty: {
+          growth: -2,
+          system: { marketHealth: -3, rigidity: 3 },
         },
       },
     ],
     message: "Không có chiến thắng tuyệt đối cho một bên. Kết quả bền vững đến từ cân bằng lợi ích.",
     lesson: "Bài học trung tâm: cân bằng tăng trưởng, công bằng xã hội và ổn định thị trường.",
-    bestOption: 2,
   },
 ];
 
@@ -627,12 +1397,24 @@ export interface Player {
 
 export type GamePhase = "lobby" | "waiting" | "round" | "round_result" | "final";
 
+export interface AppliedRoundRule {
+  id: string;
+  label: string;
+  text: string;
+  effect: RoundEffect;
+}
+
 export interface RoundHistoryItem {
   roundId: number;
-  winOption: number | string;
-  effect: OptionEffect;
+  winOption?: number | string;
+  effect?: RoundEffect;
   voteBreakdown: Record<string, number>;
-  roleChoices: Record<RoleId, number | string | null>;
+  roleVoteBreakdown?: Partial<Record<RoleId, Record<string, number>>>;
+  roleChoices: Record<RoleId, string | null>;
+  baseEffect?: RoundEffect;
+  synergyApplied?: AppliedRoundRule[];
+  conflictApplied?: AppliedRoundRule[];
+  finalEffect?: RoundEffect;
 }
 
 export interface GameState {
@@ -994,35 +1776,100 @@ export const ROLE_ENDINGS: Record<RoleId, RoleEnding[]> = {
   ],
 };
 
-export function resolveHistoryOption(roundId: number, winOption: number | string): RoundOption | null {
-  const round = GAME_ROUNDS.find((r) => r.id === roundId);
-  if (!round) return null;
-  const index = typeof winOption === "string" ? parseInt(winOption, 10) : winOption;
-  if (!Number.isFinite(index)) return null;
-  return round.options[index] ?? null;
+export function createEmptySystemEffect(): SystemEffect {
+  return { rigidity: 0, socialTrust: 0, marketHealth: 0, conflict: 0 };
+}
+
+export function createEmptyRoundEffect(): RoundEffect {
+  return {
+    growth: 0,
+    equity: 0,
+    stability: 0,
+    rolePoints: { state: 0, business: 0, worker: 0, citizen: 0 },
+    system: createEmptySystemEffect(),
+  };
+}
+
+export function applyPartialRoundEffect(
+  base: RoundEffect,
+  partial: PartialRoundEffect | null | undefined
+): RoundEffect {
+  if (!partial) return { ...base, rolePoints: { ...base.rolePoints }, system: { ...base.system } };
+
+  return {
+    growth: base.growth + (partial.growth ?? 0),
+    equity: base.equity + (partial.equity ?? 0),
+    stability: base.stability + (partial.stability ?? 0),
+    rolePoints: {
+      state: base.rolePoints.state + (partial.rolePoints?.state ?? 0),
+      business: base.rolePoints.business + (partial.rolePoints?.business ?? 0),
+      worker: base.rolePoints.worker + (partial.rolePoints?.worker ?? 0),
+      citizen: base.rolePoints.citizen + (partial.rolePoints?.citizen ?? 0),
+    },
+    system: {
+      rigidity: base.system.rigidity + (partial.system?.rigidity ?? 0),
+      socialTrust: base.system.socialTrust + (partial.system?.socialTrust ?? 0),
+      marketHealth: base.system.marketHealth + (partial.system?.marketHealth ?? 0),
+      conflict: base.system.conflict + (partial.system?.conflict ?? 0),
+    },
+  };
+}
+
+export function materializeOptionEffect(option: RoleChoiceOption): RoundEffect {
+  return applyPartialRoundEffect(createEmptyRoundEffect(), {
+    growth: option.macro.growth ?? 0,
+    equity: option.macro.equity ?? 0,
+    stability: option.macro.stability ?? 0,
+    rolePoints: option.rolePoints,
+    system: option.system,
+  });
+}
+
+export function resolveRoleOption(
+  round: GameRound | undefined,
+  roleId: RoleId,
+  optionId: string | null | undefined
+): RoleChoiceOption | null {
+  if (!round || !optionId) return null;
+  return round.roles[roleId].options.find((option) => option.id === optionId) ?? null;
+}
+
+export function matchesRoleRule(
+  selections: Record<RoleId, string | null>,
+  condition: Partial<Record<RoleId, string[]>>
+): boolean {
+  return (Object.keys(condition) as RoleId[]).every((roleId) => {
+    const accepted = condition[roleId];
+    if (!accepted?.length) return true;
+    return selections[roleId] !== null && accepted.includes(selections[roleId] as string);
+  });
+}
+
+export function getHistoryEffect(historyItem: RoundHistoryItem): RoundEffect {
+  if (historyItem.finalEffect) return historyItem.finalEffect;
+  if (historyItem.effect) return historyItem.effect;
+  return createEmptyRoundEffect();
 }
 
 export function computeRoleScores(roundHistory: RoundHistoryItem[]): Record<RoleId, number> {
   const scores: Record<RoleId, number> = { state: 0, business: 0, worker: 0, citizen: 0 };
   for (const hist of roundHistory) {
-    const option = resolveHistoryOption(hist.roundId, hist.winOption);
-    if (!option) continue;
+    const effect = getHistoryEffect(hist);
     for (const role of Object.keys(scores) as RoleId[]) {
-      scores[role] += option.effect.rolePoints[role] ?? 0;
+      scores[role] += effect.rolePoints[role] ?? 0;
     }
   }
   return scores;
 }
 
 export function computeSystemScores(roundHistory: RoundHistoryItem[]): SystemScores {
-  const scores: SystemScores = { rigidity: 0, socialTrust: 0, marketHealth: 0, conflict: 0 };
+  const scores: SystemScores = createEmptySystemEffect();
   for (const hist of roundHistory) {
-    const option = resolveHistoryOption(hist.roundId, hist.winOption);
-    if (!option) continue;
-    scores.rigidity += option.effect.system.rigidity;
-    scores.socialTrust += option.effect.system.socialTrust;
-    scores.marketHealth += option.effect.system.marketHealth;
-    scores.conflict += option.effect.system.conflict;
+    const effect = getHistoryEffect(hist);
+    scores.rigidity += effect.system.rigidity;
+    scores.socialTrust += effect.system.socialTrust;
+    scores.marketHealth += effect.system.marketHealth;
+    scores.conflict += effect.system.conflict;
   }
   return scores;
 }

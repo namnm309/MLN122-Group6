@@ -9,14 +9,20 @@ import React, {
   useEffect,
 } from "react";
 import {
+  AppliedRoundRule,
   GameState,
-  GamePhase,
   Player,
+  GameRound,
   RoleId,
   Indicators,
   GAME_ROUNDS,
   ROLES,
+  applyPartialRoundEffect,
+  createEmptyRoundEffect,
   generateRoomCode,
+  materializeOptionEffect,
+  matchesRoleRule,
+  resolveRoleOption,
 } from "./game-data";
 import { supabase } from "./supabase";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -55,6 +61,28 @@ const defaultState: GameState = {
   roundHistory: [],
   countdown: ROUND_DURATION_SECONDS,
 };
+
+const ROLE_IDS: RoleId[] = ["state", "business", "worker", "citizen"];
+
+function resolveRoleChoice(
+  round: GameRound,
+  roleId: RoleId,
+  roleVoteBreakdown: Partial<Record<RoleId, Record<string, number>>>
+): string | null {
+  const counts = roleVoteBreakdown[roleId] ?? {};
+  let bestChoice: string | null = null;
+  let bestCount = -1;
+
+  round.roles[roleId].options.forEach((option) => {
+    const count = counts[option.id] ?? 0;
+    if (count > bestCount) {
+      bestChoice = option.id;
+      bestCount = count;
+    }
+  });
+
+  return bestCount > 0 ? bestChoice : null;
+}
 
 const GameContext = createContext<GameContextValue | null>(null);
 
@@ -450,30 +478,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         .eq("room_id", state.roomCode)
         .eq("round_number", state.currentRound);
 
-      // Count votes
-      const voteCounts: Record<number, number> = {};
-      round.options.forEach((_, idx) => {
-        voteCounts[idx] = 0;
-      });
-
-      (voteData || []).forEach((v) => {
-        voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1;
-      });
-
-      // Find winning option
-      let winOption = round.bestOption;
-      let maxVotes = -1;
-      Object.entries(voteCounts).forEach(([optIdStr, count]) => {
-        const optId = parseInt(optIdStr);
-        if (count > maxVotes) {
-          maxVotes = count;
-          winOption = optId;
-        }
-      });
-
-      const winningOption = round.options[winOption];
-      const effect = winningOption.effect;
-
       // Get current game state
       const { data: gsData } = await supabase
         .from("game_state")
@@ -485,38 +489,95 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const currentEquity = (gsData?.social_equity || 50) / 10;
       const currentStability = (gsData?.market_stability || 50) / 10;
 
-      const newIndicators: Indicators = {
-        growth: Math.max(0, Math.min(10, currentGrowth + effect.growth)),
-        equity: Math.max(0, Math.min(10, currentEquity + effect.equity)),
-        stability: Math.max(0, Math.min(10, currentStability + effect.stability)),
-      };
-
-      // Build role choices from players and votes
       const { data: playersData } = await supabase
         .from("players")
         .select("*")
         .eq("room_id", state.roomCode);
 
-      const roleChoices: Record<RoleId, number | null> = {
+      const voteBreakdown: Record<string, number> = {};
+      const roleVoteBreakdown: Partial<Record<RoleId, Record<string, number>>> = {};
+      const roleChoices: Record<RoleId, string | null> = {
         state: null,
         business: null,
         worker: null,
         citizen: null,
       };
 
+      ROLE_IDS.forEach((roleId) => {
+        roleVoteBreakdown[roleId] = {};
+        round.roles[roleId].options.forEach((option) => {
+          voteBreakdown[option.id] = 0;
+          roleVoteBreakdown[roleId]![option.id] = 0;
+        });
+      });
+
       (playersData || []).forEach((p) => {
         const vote = (voteData || []).find((v) => v.player_id === p.id);
-        if (p.role && vote) {
-          roleChoices[p.role as RoleId] = vote.option_index;
-        }
+        const roleId = p.role as RoleId | null;
+        if (!roleId || !vote) return;
+
+        const option = round.roles[roleId].options[vote.option_index];
+        if (!option) return;
+
+        voteBreakdown[option.id] = (voteBreakdown[option.id] || 0) + 1;
+        const perRole = roleVoteBreakdown[roleId] ?? {};
+        perRole[option.id] = (perRole[option.id] || 0) + 1;
+        roleVoteBreakdown[roleId] = perRole;
       });
+
+      ROLE_IDS.forEach((roleId) => {
+        roleChoices[roleId] = resolveRoleChoice(round, roleId, roleVoteBreakdown);
+      });
+
+      const baseEffect = ROLE_IDS.reduce((effect, roleId) => {
+        const option = resolveRoleOption(round, roleId, roleChoices[roleId]);
+        if (!option) return effect;
+        return applyPartialRoundEffect(effect, materializeOptionEffect(option));
+      }, createEmptyRoundEffect());
+
+      const synergyApplied: AppliedRoundRule[] = [];
+      round.synergyRules.forEach((rule) => {
+        if (!matchesRoleRule(roleChoices, rule.if)) return;
+        synergyApplied.push({
+          id: rule.id,
+          label: rule.label,
+          text: rule.text,
+          effect: applyPartialRoundEffect(createEmptyRoundEffect(), rule.bonus),
+        });
+      });
+
+      const conflictApplied: AppliedRoundRule[] = [];
+      round.conflictRules.forEach((rule) => {
+        if (!matchesRoleRule(roleChoices, rule.if)) return;
+        conflictApplied.push({
+          id: rule.id,
+          label: rule.label,
+          text: rule.text,
+          effect: applyPartialRoundEffect(createEmptyRoundEffect(), rule.penalty),
+        });
+      });
+
+      const finalEffect = [...synergyApplied, ...conflictApplied].reduce(
+        (effect, appliedRule) => applyPartialRoundEffect(effect, appliedRule.effect),
+        baseEffect
+      );
+
+      const newIndicators: Indicators = {
+        growth: Math.max(0, Math.min(10, currentGrowth + finalEffect.growth)),
+        equity: Math.max(0, Math.min(10, currentEquity + finalEffect.equity)),
+        stability: Math.max(0, Math.min(10, currentStability + finalEffect.stability)),
+      };
 
       const roundData = {
         roundId: round.id,
-        winOption,
-        effect,
-        voteBreakdown: voteCounts,
+        effect: finalEffect,
+        voteBreakdown,
+        roleVoteBreakdown,
         roleChoices,
+        baseEffect,
+        synergyApplied,
+        conflictApplied,
+        finalEffect,
       };
 
       // Update game state in DB — this triggers game_state subscription for all clients
