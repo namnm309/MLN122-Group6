@@ -56,6 +56,8 @@ const defaultState: GameState = {
   players: [],
   phase: "lobby",
   currentRound: 0,
+  turnIndex: 0,
+  turnExpiresAt: null,
   indicators: { ...defaultIndicators },
   votes: {},
   roundHistory: [],
@@ -97,6 +99,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Use refs for values needed inside subscription callbacks to avoid stale closures
   const roomCodeRef = useRef<string>("");
   const currentRoundRef = useRef<number>(0);
+  const turnIndexRef = useRef<number>(0);
+  const hostAdvancingRef = useRef<boolean>(false);
 
   const stopCountdown = useCallback(() => {
     if (countdownRef.current) {
@@ -133,6 +137,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     currentRoundRef.current = state.currentRound;
   }, [state.currentRound]);
+
+  useEffect(() => {
+    turnIndexRef.current = state.turnIndex;
+  }, [state.turnIndex]);
 
   // Subscribe to realtime updates when in a room
   useEffect(() => {
@@ -246,6 +254,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               stability: gs.market_stability / 10,
             },
             roundHistory: gs.round_history || [],
+            turnIndex: gs.turn_index ?? prev.turnIndex,
+            turnExpiresAt: gs.turn_expires_at ?? prev.turnExpiresAt,
           }));
         }
       )
@@ -274,6 +284,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         .insert([{
           room_id: roomCode,
           current_round: 0,
+          turn_index: 0,
+          turn_expires_at: null,
           economic_growth: 50,
           social_equity: 50,
           market_stability: 50,
@@ -440,7 +452,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // Update game state
       await supabase
         .from("game_state")
-        .update({ current_round: 1 })
+        .update({
+          current_round: 1,
+          turn_index: 0,
+          turn_expires_at: new Date(Date.now() + ROUND_DURATION_SECONDS * 1000).toISOString(),
+        })
         .eq("room_id", state.roomCode);
 
       const roleByPlayerId = new Map(assignments.map((assignment) => [assignment.playerId, assignment.role]));
@@ -454,6 +470,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         })),
         phase: "round",
         currentRound: 1,
+        turnIndex: 0,
+        turnExpiresAt: new Date(Date.now() + ROUND_DURATION_SECONDS * 1000).toISOString(),
         indicators: { ...defaultIndicators },
         votes: {},
         roundHistory: [],
@@ -535,32 +553,39 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return applyPartialRoundEffect(effect, materializeOptionEffect(option));
       }, createEmptyRoundEffect());
 
-      const synergyApplied: AppliedRoundRule[] = [];
-      round.synergyRules.forEach((rule) => {
-        if (!matchesRoleRule(roleChoices, rule.if)) return;
-        synergyApplied.push({
-          id: rule.id,
-          label: rule.label,
-          text: rule.text,
-          effect: applyPartialRoundEffect(createEmptyRoundEffect(), rule.bonus),
-        });
-      });
+      let synergyApplied: AppliedRoundRule[] = [];
+      let conflictApplied: AppliedRoundRule[] = [];
 
-      const conflictApplied: AppliedRoundRule[] = [];
-      round.conflictRules.forEach((rule) => {
-        if (!matchesRoleRule(roleChoices, rule.if)) return;
-        conflictApplied.push({
-          id: rule.id,
-          label: rule.label,
-          text: rule.text,
-          effect: applyPartialRoundEffect(createEmptyRoundEffect(), rule.penalty),
+      let finalEffect = baseEffect;
+      if (round.customEffectResolver) {
+        const customEffect = round.customEffectResolver(roleChoices);
+        finalEffect = applyPartialRoundEffect(baseEffect, customEffect as any);
+      } else {
+        round.synergyRules.forEach((rule) => {
+          if (!matchesRoleRule(roleChoices, rule.if)) return;
+          synergyApplied.push({
+            id: rule.id,
+            label: rule.label,
+            text: rule.text,
+            effect: applyPartialRoundEffect(createEmptyRoundEffect(), rule.bonus),
+          });
         });
-      });
 
-      const finalEffect = [...synergyApplied, ...conflictApplied].reduce(
-        (effect, appliedRule) => applyPartialRoundEffect(effect, appliedRule.effect),
-        baseEffect
-      );
+        round.conflictRules.forEach((rule) => {
+          if (!matchesRoleRule(roleChoices, rule.if)) return;
+          conflictApplied.push({
+            id: rule.id,
+            label: rule.label,
+            text: rule.text,
+            effect: applyPartialRoundEffect(createEmptyRoundEffect(), rule.penalty),
+          });
+        });
+
+        finalEffect = [...synergyApplied, ...conflictApplied].reduce(
+          (effect, appliedRule) => applyPartialRoundEffect(effect, appliedRule.effect),
+          baseEffect
+        );
+      }
 
       const newIndicators: Indicators = {
         growth: Math.max(0, Math.min(10, currentGrowth + finalEffect.growth)),
@@ -642,19 +667,67 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [currentPlayerDbId, state.roomCode, state.currentRound, dbReady]
   );
 
-  // Check if all players (excluding host) have voted — then auto-resolve
+  const hostAdvanceTurn = useCallback(
+    async (_reason: "complete" | "timeout") => {
+      if (hostAdvancingRef.current) return;
+      if (!dbReady) return;
+
+      const round = GAME_ROUNDS[currentRoundRef.current - 1];
+      if (!round) return;
+
+      const order = round.turnOrder ?? [];
+      const idx = turnIndexRef.current;
+
+      stopCountdown();
+
+      hostAdvancingRef.current = true;
+      try {
+        if (idx >= order.length - 1) {
+          await resolveVotes();
+          return;
+        }
+
+        const nextIdx = idx + 1;
+        const expires = new Date(Date.now() + ROUND_DURATION_SECONDS * 1000).toISOString();
+
+        await supabase
+          .from("game_state")
+          .update({ turn_index: nextIdx, turn_expires_at: expires })
+          .eq("room_id", state.roomCode);
+
+        setState((prev) => ({
+          ...prev,
+          turnIndex: nextIdx,
+          turnExpiresAt: expires,
+          countdown: ROUND_DURATION_SECONDS,
+        }));
+      } finally {
+        hostAdvancingRef.current = false;
+      }
+    },
+    [dbReady, resolveVotes, state.roomCode, stopCountdown]
+  );
+
+  // Step completion: tiến lượt khi activeRole đã vote đủ (hoặc role trống).
   useEffect(() => {
     if (state.phase !== "round" || !dbReady || !isHost) return;
+    const round = GAME_ROUNDS[state.currentRound - 1];
+    if (!round) return;
 
-    const totalPlayers = state.players.length; // host is not in players list
-    const totalVotes = Object.keys(state.votes).length;
+    const activeRole = round.turnOrder[state.turnIndex] ?? null;
+    if (!activeRole) return;
 
-    if (totalPlayers > 0 && totalVotes >= totalPlayers) {
-      stopCountdown();
-      const timer = setTimeout(() => resolveVotes(), 800);
-      return () => clearTimeout(timer);
+    const rolePlayers = state.players.filter((p) => p.role === activeRole);
+    if (rolePlayers.length === 0) {
+      hostAdvanceTurn("complete");
+      return;
     }
-  }, [state.votes, state.players, state.phase, dbReady, isHost, stopCountdown, resolveVotes]);
+
+    const allVoted = rolePlayers.every((p) => state.votes[p.id] !== undefined);
+    if (allVoted) {
+      hostAdvanceTurn("complete");
+    }
+  }, [state.phase, state.currentRound, state.turnIndex, state.players, state.votes, dbReady, isHost, hostAdvanceTurn]);
 
   const nextRound = useCallback(async () => {
     if (state.currentRound >= GAME_ROUNDS.length) {
@@ -675,7 +748,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       await supabase
         .from("game_state")
-        .update({ current_round: nextRoundNum })
+        .update({
+          current_round: nextRoundNum,
+          turn_index: 0,
+          turn_expires_at: new Date(Date.now() + ROUND_DURATION_SECONDS * 1000).toISOString(),
+        })
         .eq("room_id", state.roomCode);
 
       // Host also transitions immediately (don't wait for its own subscription)
@@ -683,6 +760,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         phase: "round",
         currentRound: nextRoundNum,
+        turnIndex: 0,
+        turnExpiresAt: new Date(Date.now() + ROUND_DURATION_SECONDS * 1000).toISOString(),
         votes: {},
         countdown: ROUND_DURATION_SECONDS,
       }));
@@ -711,7 +790,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setState((prev) => {
           if (prev.countdown <= 1) {
             stopCountdown();
-            resolveVotes();
+            if (isHost) hostAdvanceTurn("timeout");
             return { ...prev, countdown: 0 };
           }
           return { ...prev, countdown: prev.countdown - 1 };
@@ -723,7 +802,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return () => stopCountdown();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase, state.currentRound]);
+  }, [state.phase, state.currentRound, state.turnIndex, isHost, hostAdvanceTurn]);
 
   return (
     <GameContext.Provider

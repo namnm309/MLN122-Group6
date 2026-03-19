@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FullPageSlide } from "@/components/landing/fullpage-slide";
 import { KnowledgeQuiz } from "@/components/landing/knowledge-quiz";
@@ -62,6 +62,7 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
   );
   const isMobile = useIsMobile();
   const [activeIndex, setActiveIndex] = useState(0);
+  const didInitialSnapRef = useRef(false);
 
   useEffect(() => {
     if (isMobile) return;
@@ -101,6 +102,28 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
     return () => observer.disconnect();
   }, [isMobile, slideRefs]);
 
+  // On first mount, force the scroll container to "snap" to the right slide immediately.
+  // Without this, sometimes the initial position is slightly offset until the user scrolls.
+  useEffect(() => {
+    if (isMobile) return;
+    if (didInitialSnapRef.current) return;
+    didInitialSnapRef.current = true;
+
+    const rawHash = window.location.hash.replace("#", "");
+    const targetIndex = slides.findIndex((slide) => slide.id === rawHash);
+    const idx = targetIndex >= 0 ? targetIndex : 0;
+
+    // Update state for nav UI immediately.
+    setActiveIndex((prev) => (prev === idx ? prev : idx));
+
+    // Double rAF helps ensure layout/classes are applied before snapping.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        slideRefs[idx]?.current?.scrollIntoView({ behavior: "auto", block: "start" });
+      });
+    });
+  }, [isMobile, slideRefs, slides]);
+
   useEffect(() => {
     const scrollToHash = (behavior: ScrollBehavior) => {
       const rawHash = window.location.hash.replace("#", "");
@@ -114,7 +137,6 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
 
     const syncHashScroll = () => scrollToHash("smooth");
 
-    scrollToHash("auto");
     window.addEventListener("hashchange", syncHashScroll);
     return () => window.removeEventListener("hashchange", syncHashScroll);
   }, [slideRefs, slides]);
@@ -287,28 +309,86 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
                   slideRefs[index].current = node;
                 }}
               >
-                <FullPageSlide {...commonProps} actions={slide.actions}>
-                  <div className="grid gap-10 lg:grid-cols-[1.3fr_0.7fr]">
-                    <div className="space-y-4">
+                <FullPageSlide
+                  {...commonProps}
+                  actions={slide.actions}
+                  childrenWrapperClassName={
+                    slide.id === "noidung"
+                      ? "mt-4"
+                      : slide.id === "loiich" || slide.id === "nguyentac"
+                        ? "mt-2"
+                        : undefined
+                  }
+                  fullHeight={slide.id === "noidung" || slide.id === "loiich" || slide.id === "nguyentac" ? false : undefined}
+                  childrenReveal={
+                    slide.id === "noidung" || slide.id === "loiich" || slide.id === "nguyentac" ? false : undefined
+                  }
+                  headerTight={slide.id === "loiich" || slide.id === "nguyentac" ? true : undefined}
+                  outerPaddingClassName={
+                    slide.id === "noidung"
+                      ? "pt-[calc(4.75rem+env(safe-area-inset-top))] sm:pt-20 pb-10 sm:pb-14"
+                      : slide.id === "loiich" || slide.id === "nguyentac"
+                        ? "pt-[calc(4.75rem+env(safe-area-inset-top))] sm:pt-20 pb-16 sm:pb-22"
+                        : undefined
+                  }
+                  innerGapClassName={slide.id === "noidung" || slide.id === "loiich" || slide.id === "nguyentac" ? "gap-6" : undefined}
+                >
+                  <div
+                    className={cn(
+                      "grid gap-10 lg:grid-cols-[1.3fr_0.7fr]",
+                      (slide.id === "noidung" || slide.id === "loiich" || slide.id === "nguyentac") && "gap-6"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "space-y-4",
+                        (slide.id === "loiich" || slide.id === "nguyentac") && "space-y-3"
+                      )}
+                    >
                       {slide.bullets.map((bullet) => (
-                        <div key={`${slide.id}-${bullet.label ?? bullet.text}`} className="border-t border-border/70 pt-4">
+                        <div
+                          key={`${slide.id}-${bullet.label ?? bullet.text}`}
+                          className={cn(
+                            "border-t border-border/70 pt-4",
+                            (slide.id === "loiich" || slide.id === "nguyentac") && "pt-3"
+                          )}
+                        >
                           {bullet.label ? (
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
                               {bullet.label}
                             </div>
                           ) : null}
-                          <p className="mt-2 text-sm sm:text-base leading-relaxed text-foreground/90">{bullet.text}</p>
+                          <p
+                            className={cn(
+                              "mt-2 text-sm sm:text-base leading-relaxed text-foreground/90",
+                              (slide.id === "loiich" || slide.id === "nguyentac") && "mt-1.5"
+                            )}
+                          >
+                            {bullet.text}
+                          </p>
                         </div>
                       ))}
                     </div>
 
-                    <div className="space-y-4">
+                    <div
+                      className={cn(
+                        "space-y-4",
+                        (slide.id === "loiich" || slide.id === "nguyentac") && "space-y-3"
+                      )}
+                    >
                       {slide.asideTitle && slide.asideText ? (
                         <div className="border-l-2 border-primary/40 pl-4">
                           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                             {slide.asideTitle}
                           </div>
-                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{slide.asideText}</p>
+                          <p
+                            className={cn(
+                              "mt-2 text-sm leading-relaxed text-muted-foreground",
+                              (slide.id === "loiich" || slide.id === "nguyentac") && "mt-1.5"
+                            )}
+                          >
+                            {slide.asideText}
+                          </p>
                         </div>
                       ) : null}
 

@@ -166,11 +166,11 @@ export function TheoryScreen({ onBack }: { onBack: () => void }) {
               </div>
             </Reveal>
 
-            <Reveal as="section" id="noidung" className="scroll-mt-6" delayMs={160}>
-              <div className="rounded-2xl border border-border bg-card p-5">
+            <section id="noidung" className="scroll-mt-6" aria-label="Nội dung hoàn thiện thể chế">
+              <div className="rounded-2xl border border-border bg-card p-5 overflow-x-auto min-h-[300px]">
                 <h3 className="text-base font-bold mb-3">Nội dung hoàn thiện thể chế (5 mảng)</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground leading-relaxed">
-                  {[
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground leading-relaxed break-words">
+                  {[ 
                     {
                       k: "A",
                       t: "Sở hữu & thành phần kinh tế",
@@ -203,18 +203,18 @@ export function TheoryScreen({ onBack }: { onBack: () => void }) {
                           {x.k}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-foreground">{x.t}</div>
-                          <div className="mt-0.5">{x.d}</div>
+                          <div className="font-semibold text-foreground break-words">{x.t}</div>
+                          <div className="mt-0.5 break-words">{x.d}</div>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </Reveal>
+            </section>
 
-            <Reveal as="section" id="loiich" className="scroll-mt-6" delayMs={180}>
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+            <section id="loiich" className="scroll-mt-6" aria-label="Lợi ích & quan hệ lợi ích">
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-3 overflow-x-auto min-h-[300px]">
                 <h3 className="text-base font-bold">Lợi ích kinh tế & quan hệ lợi ích</h3>
                 <div className="text-sm text-muted-foreground leading-relaxed space-y-3">
                   <p>
@@ -226,14 +226,14 @@ export function TheoryScreen({ onBack }: { onBack: () => void }) {
                     có thể hợp tác, cũng có thể xung đột.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {[
+                    {[ 
                       { t: "Cá nhân", d: "Động lực trực tiếp học tập – lao động – sáng tạo." },
                       { t: "Tập thể", d: "Lợi ích của nhóm/tổ chức/doanh nghiệp/cơ quan." },
                       { t: "Xã hội/Quốc gia", d: "Lợi ích chung của cộng đồng và đất nước." },
                     ].map((x) => (
                       <div key={x.t} className="p-3 rounded-xl bg-secondary border border-border">
                         <div className="text-sm font-semibold text-foreground">{x.t}</div>
-                        <div className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{x.d}</div>
+                        <div className="text-sm text-muted-foreground mt-0.5 leading-relaxed break-words">{x.d}</div>
                       </div>
                     ))}
                   </div>
@@ -248,7 +248,7 @@ export function TheoryScreen({ onBack }: { onBack: () => void }) {
                   </div>
                 </div>
               </div>
-            </Reveal>
+            </section>
 
             <Reveal as="section" id="nguyentac" className="scroll-mt-6" delayMs={200}>
               <div className="rounded-2xl border border-border bg-card p-5">

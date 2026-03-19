@@ -249,8 +249,15 @@ export interface RoleChoiceOption {
   system: Partial<SystemEffect>;
 }
 
+export interface QuestionVariant {
+  id: string;
+  when: Partial<Record<RoleId, string[]>>;
+  question: string;
+}
+
 export interface RoundRoleConfig {
   question: string;
+  questionVariants?: QuestionVariant[];
   options: RoleChoiceOption[];
 }
 
@@ -274,9 +281,11 @@ export interface GameRound {
   id: number;
   title: string;
   context: string;
+  turnOrder: RoleId[];
   roles: Record<RoleId, RoundRoleConfig>;
   synergyRules: SynergyRule[];
   conflictRules: ConflictRule[];
+  customEffectResolver?: (roleChoices: Record<RoleId, string | null>) => RoundEffect;
   message: string;
   lesson: string;
 }
@@ -286,11 +295,32 @@ export const GAME_ROUNDS: GameRound[] = [
     id: 1,
     title: "Giá năng lượng tăng sốc",
     context:
-      "Giá xăng dầu và điện cùng leo thang. Doanh nghiệp thấy chi phí đội lên từng ngày, người lao động thấy lương chưa tăng mà ví đã mỏng đi, còn người dân thì mỗi lần đổ xăng là một lần tụt mood.",
+      "Giá xăng dầu và điện tăng mạnh. Chi phí vận hành của doanh nghiệp đội lên nhanh. Giá sinh hoạt bắt đầu nhích. Không xử lý khéo, áp lực sẽ lan thành xung đột xã hội.",
+    turnOrder: ["business", "state", "worker", "citizen"],
     roles: {
       state: {
         question:
-          "Giá đang nhảy như coin meme. Nếu là Nhà nước, bạn chốt hướng nào để hạ sốc mà không làm ngân sách và thị trường lệch pha?",
+          "Giá năng lượng đang dí thẳng vào chi phí. Doanh nghiệp phản ứng sao trước cú sốc này. Nhà nước phải đứng giữa bài toán: cứu ai, cứu đến đâu, và có méo hệ thống không?",
+        questionVariants: [
+          {
+            id: "when-business-pass-and-state-swing",
+            when: { business: ["B"] },
+            question:
+              "Doanh nghiệp đang chuyển một phần chi phí sang giá bán. Nhà nước xử lý sao để đỡ sốc cho xã hội?",
+          },
+          {
+            id: "when-business-cut-welfare",
+            when: { business: ["C"] },
+            question:
+              "Doanh nghiệp đang giữ biên lợi nhuận bằng cách siết phúc lợi lao động. Nhà nước phản ứng thế nào?",
+          },
+          {
+            id: "when-business-gong-or-invest",
+            when: { business: ["A", "D"] },
+            question:
+              "Doanh nghiệp đang cố tự hấp thụ cú sốc bằng tối ưu/đầu tư. Nhà nước hỗ trợ sao để giữ nhịp mà không bơm sai chỗ?",
+          },
+        ],
         options: [
           {
             id: "A",
@@ -307,8 +337,8 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Không giảm thuế, không trợ giá, để giá năng lượng tự chạy theo thị trường. Ngân sách đỡ áp lực hơn, nhưng phần đau sẽ dồn thẳng sang doanh nghiệp và hộ gia đình.",
             rolePoints: { state: -1 },
-            macro: { growth: 1, equity: -2, stability: -2 },
-            system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
+            macro: { growth: 0, equity: -1, stability: -1 },
+            system: { socialTrust: -1, conflict: 1 },
           },
           {
             id: "C",
@@ -317,7 +347,7 @@ export const GAME_ROUNDS: GameRound[] = [
               "Đặt trần giá diện rộng để ghìm giá ngay cho toàn thị trường. Dễ trấn an tâm lý nhanh, nhưng nếu kéo dài thì dễ méo tín hiệu giá và bóp nghẹt động lực cung ứng.",
             rolePoints: { state: -1 },
             macro: { growth: -2, equity: 1, stability: -1 },
-            system: { rigidity: 2, socialTrust: 0, marketHealth: -2, conflict: 1 },
+            system: { rigidity: 2, marketHealth: -2, conflict: 1 },
           },
           {
             id: "D",
@@ -325,14 +355,13 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Không hỗ trợ trực tiếp ngay, dồn nguồn lực cho đầu tư công và hạ tầng năng lượng. Lợi về dài hạn, nhưng ngắn hạn thì dân và doanh nghiệp phải tự gồng nhiều hơn.",
             rolePoints: { state: 1 },
-            macro: { growth: 2, equity: -1, stability: -1 },
-            system: { rigidity: 0, socialTrust: -1, marketHealth: 1, conflict: 1 },
+            macro: { growth: 1, equity: 0, stability: 0 },
+            system: { rigidity: 1 },
           },
         ],
       },
       business: {
-        question:
-          "Chi phí đầu vào bị buff lửa liên tục. Nếu là doanh nghiệp, bạn chọn cách nào để đỡ toang mà vẫn còn cửa sống dài hạn?",
+        question: "Giá năng lượng đang dí thẳng vào chi phí. DN phản ứng sao trước cú sốc này?",
         options: [
           {
             id: "A",
@@ -341,7 +370,7 @@ export const GAME_ROUNDS: GameRound[] = [
               "Tạm gồng bằng cách tiết kiệm năng lượng, tối ưu logistics và chưa đẩy giá quá mạnh sang khách. Lãi mỏng đi một chút nhưng giữ được quan hệ với thị trường.",
             rolePoints: { business: 2 },
             macro: { growth: 1, equity: 1, stability: 1 },
-            system: { marketHealth: 2, socialTrust: 1, conflict: -1 },
+            system: { socialTrust: 1, marketHealth: 2, conflict: -1, rigidity: 0 },
           },
           {
             id: "B",
@@ -349,8 +378,8 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Đẩy phần lớn chi phí sang giá bán để bảo toàn biên lợi nhuận. Doanh nghiệp đỡ đau hơn, nhưng người dân và sức mua sẽ là bên lãnh đủ.",
             rolePoints: { business: 1 },
-            macro: { growth: 0, equity: -2, stability: -1 },
-            system: { marketHealth: -1, socialTrust: -2, conflict: 2 },
+            macro: { growth: 0, equity: -1, stability: -1 },
+            system: { socialTrust: -1, conflict: 1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
@@ -359,7 +388,7 @@ export const GAME_ROUNDS: GameRound[] = [
               "Siết phụ cấp, phúc lợi và các khoản mềm để giữ lợi nhuận. Cách này cứu sổ sách ngắn hạn nhưng rất dễ làm quan hệ lao động căng lên.",
             rolePoints: { business: 1 },
             macro: { growth: 0, equity: -2, stability: -2 },
-            system: { socialTrust: -2, conflict: 2 },
+            system: { socialTrust: -2, conflict: 2, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "D",
@@ -368,13 +397,27 @@ export const GAME_ROUNDS: GameRound[] = [
               "Đầu tư công nghệ tiết kiệm năng lượng, chấp nhận đau vốn ban đầu để giảm phụ thuộc về sau. Đòn này không cứu ngay lập tức, nhưng mở cửa sống khỏe lâu hơn.",
             rolePoints: { business: 2 },
             macro: { growth: 2, equity: 0, stability: 1 },
-            system: { marketHealth: 2, socialTrust: 0, conflict: -1 },
+            system: { socialTrust: 0, marketHealth: 2, conflict: -1, rigidity: 0 },
           },
         ],
       },
       worker: {
         question:
-          "Giá cả leo thang mà lương đứng hình. Nếu là người lao động, bạn phản ứng sao để bảo vệ mình mà không tự đẩy mình vào thế khó hơn?",
+          "Chi phí sống tăng, áp lực từ doanh nghiệp và phản ứng của Nhà nước đang định hình nhịp sống của bạn. Team lao động làm gì để bảo vệ mình mà không tự làm hệ thống rơi vào thế vỡ?",
+        questionVariants: [
+          {
+            id: "when-business-cut-and-state-weak",
+            when: { business: ["C"], state: ["B"] },
+            question:
+              "Chi phí sống tăng, phúc lợi bị siết, hỗ trợ lại chưa rõ. Team lao động làm gì?",
+          },
+          {
+            id: "when-business-gong-and-state-support",
+            when: { business: ["A", "D"], state: ["A"] },
+            question:
+              "Áp lực giá có nhưng DN đang cố gồng, Nhà nước cũng bắt đầu hỗ trợ. Team lao động phản ứng sao?",
+          },
+        ],
         options: [
           {
             id: "A",
@@ -382,8 +425,8 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Yêu cầu phụ cấp xăng xe hoặc điện nước ngay để bù chi phí sống. Bạn đỡ hụt hơi nhanh, nhưng doanh nghiệp sẽ thấy áp lực chi phí tăng tức thì.",
             rolePoints: { worker: 2 },
-            macro: { equity: 2, stability: 0 },
-            system: { socialTrust: 0, conflict: 1 },
+            macro: { growth: 0, equity: 2, stability: 0 },
+            system: { socialTrust: 0, conflict: 1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "B",
@@ -392,7 +435,7 @@ export const GAME_ROUNDS: GameRound[] = [
               "Chấp nhận đi theo lộ trình nếu doanh nghiệp cam kết rõ chuyện tăng lương hoặc phụ cấp. Bạn chưa được hết ngay, nhưng đổi lại cơ hội giữ việc và giữ nhịp sản xuất tốt hơn.",
             rolePoints: { worker: 2 },
             macro: { growth: 1, equity: 2, stability: 2 },
-            system: { socialTrust: 2, conflict: -1 },
+            system: { socialTrust: 2, conflict: -1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
@@ -401,7 +444,7 @@ export const GAME_ROUNDS: GameRound[] = [
               "Đình công hoặc nghỉ việc mạnh để ép doanh nghiệp phải nhượng bộ. Cách này tạo sức ép lớn, nhưng cũng dễ làm sản xuất gãy nhịp và rủi ro việc làm tăng lên.",
             rolePoints: { worker: 1 },
             macro: { growth: -1, equity: 1, stability: -2 },
-            system: { socialTrust: -1, conflict: 3 },
+            system: { socialTrust: -1, conflict: 3, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "D",
@@ -410,13 +453,27 @@ export const GAME_ROUNDS: GameRound[] = [
               "Tạm gác yêu cầu lại để giữ việc trước đã. Ít xung đột hơn thật, nhưng phần thiệt ngắn hạn gần như dồn hết về phía người lao động.",
             rolePoints: { worker: 0 },
             macro: { growth: 0, equity: -1, stability: 0 },
-            system: { socialTrust: -1, conflict: 0 },
+            system: { socialTrust: -1, conflict: 0, marketHealth: 0, rigidity: 0 },
           },
         ],
       },
       citizen: {
         question:
-          "Xăng điện tăng làm ví mỏng dần. Nếu là người dân, bạn sẽ ủng hộ kiểu phản ứng nào để bảo vệ đời sống của mình?",
+          "Giá hàng đang nhích lên và phản ứng xã hội đang quyết định nhịp ổn định của hệ thống. Người dân chọn mode nào?",
+        questionVariants: [
+          {
+            id: "when-price-up-and-support-weak",
+            when: { business: ["B"], state: ["B"] },
+            question:
+              "Giá hàng đang nhích lên rõ, hỗ trợ chưa đủ cảm nhận. Người dân chọn mode nào?",
+          },
+          {
+            id: "when-targeted-support-and-stable-system",
+            when: { business: ["A", "D"], state: ["A"] },
+            question:
+              "Giá còn áp lực nhưng hệ thống đang cố hạ nhiệt. Người dân phản ứng sao?",
+          },
+        ],
         options: [
           {
             id: "A",
@@ -424,8 +481,8 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Cắt bớt các khoản chưa quá cần để ưu tiên nhu yếu phẩm. Gia đình đỡ sốc hơn, nhưng tổng cầu và sức mua chung cũng chậm lại.",
             rolePoints: { citizen: 1 },
-            macro: { growth: -1, stability: 1 },
-            system: { conflict: -1 },
+            macro: { growth: -1, equity: 0, stability: 1 },
+            system: { conflict: -1, socialTrust: 0, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "B",
@@ -433,8 +490,8 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Ủng hộ kiểu hỗ trợ đúng người, đúng lúc thay vì rải đều cho tất cả. Cách này nghe có vẻ ít 'sướng' ngay, nhưng công bằng và bền hơn cho cả hệ thống.",
             rolePoints: { citizen: 2 },
-            macro: { equity: 2, stability: 2 },
-            system: { socialTrust: 2, conflict: -1 },
+            macro: { growth: 0, equity: 2, stability: 2 },
+            system: { socialTrust: 2, conflict: -1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
@@ -442,8 +499,8 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Muốn ghìm giá thật mạnh để thứ gì cũng phải rẻ ngay. Dễ thấy lợi trước mắt, nhưng chi phí thật thường sẽ bị đẩy ngược lại sang doanh nghiệp hoặc ngân sách.",
             rolePoints: { citizen: 1 },
-            macro: { equity: 1, stability: -1 },
-            system: { rigidity: 2, marketHealth: -2, conflict: 1 },
+            macro: { growth: 0, equity: 1, stability: -1 },
+            system: { rigidity: 2, marketHealth: -2, conflict: 1, socialTrust: 0 },
           },
           {
             id: "D",
@@ -451,21 +508,21 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Không kỳ vọng hỗ trợ gì cả, ai lo được cho mình thì lo. Cách này nghe thực dụng, nhưng niềm tin xã hội và cảm giác công bằng sẽ rơi khá nhanh.",
             rolePoints: { citizen: -1 },
-            macro: { equity: -2, stability: -1 },
-            system: { socialTrust: -2, conflict: 1 },
+            macro: { growth: 0, equity: -2, stability: -1 },
+            system: { socialTrust: -2, conflict: 1, marketHealth: 0, rigidity: 0 },
           },
         ],
       },
     },
     synergyRules: [
       {
-        id: "energy-soft-landing",
-        label: "Phối hợp hạ sốc",
+        id: "energy_chain_good",
+        label: "Chuỗi đẹp hạ sốc",
         text:
-          "Nhà nước điều tiết vừa phải, doanh nghiệp không đẩy hết gánh nặng, người lao động thương lượng còn người dân ủng hộ hỗ trợ đúng mục tiêu.",
+          "Doanh nghiệp gồng đúng cách, Nhà nước cứu trúng nhịp, người lao động thương lượng có neo và người dân ủng hộ hỗ trợ đúng người đúng lúc.",
         if: {
-          state: ["A"],
           business: ["A", "D"],
+          state: ["A"],
           worker: ["B"],
           citizen: ["B"],
         },
@@ -473,73 +530,125 @@ export const GAME_ROUNDS: GameRound[] = [
           growth: 1,
           equity: 1,
           stability: 2,
-          system: { socialTrust: 2, conflict: -2 },
+          system: { socialTrust: 2, marketHealth: 1, conflict: -2 },
         },
       },
     ],
     conflictRules: [
       {
-        id: "energy-hard-clash",
-        label: "Ghìm giá, xung đột tăng",
+        id: "energy_chain_shift",
+        label: "Chuỗi lệch (penalty nhẹ)",
         text:
-          "Kiểm soát cứng trong khi doanh nghiệp và lao động phản ứng mạnh khiến hệ thống mất ổn định nhanh.",
+          "DN chuyển gánh nặng sang giá bán, Nhà nước không bắt nhịp, người lao động bị kéo vào đối đầu và người dân cũng chọn phản ứng cực đoan hơn.",
         if: {
-          state: ["C"],
-          business: ["B", "C"],
+          business: ["B"],
+          state: ["B"],
+          worker: ["A"],
+          citizen: ["A"],
+        },
+        penalty: {
+          equity: -1,
+          stability: -1,
+          system: { socialTrust: -1, conflict: 1 },
+        },
+      },
+      {
+        id: "energy_chain_bad",
+        label: "Chuỗi xấu (penalty nặng)",
+        text:
+          "DN cắt phúc lợi để giữ lãi, Nhà nước can thiệp méo nhịp, người lao động phản ứng sâu và người dân kéo cuộc chơi về hướng ai thắng ai chịu.",
+        if: {
+          business: ["C"],
+          state: ["B", "D"],
           worker: ["C"],
+          citizen: ["C", "D"],
+        },
+        penalty: {
+          growth: -1,
+          equity: -2,
+          stability: -3,
+          system: { socialTrust: -3, marketHealth: -1, conflict: 4 },
+        },
+      },
+      {
+        id: "energy_chain_fake_stability",
+        label: "Ổn định giả (penalty cấu trúc)",
+        text:
+          "DN và Nhà nước cùng chọn các bước khiến hệ thống yên theo kiểu bị khóa cứng: người lao động chịu thiệt quyền lợi và người dân chọn phản ứng co cụm.",
+        if: {
+          business: ["B", "C"],
+          state: ["C"],
+          worker: ["D"],
           citizen: ["C"],
         },
         penalty: {
-          stability: -3,
-          system: { marketHealth: -3, conflict: 4, rigidity: 3 },
+          stability: 1,
+          system: { rigidity: 3, socialTrust: -2, marketHealth: -2, conflict: 1 },
         },
       },
     ],
-    message: "Cùng một cú sốc năng lượng, mỗi bên đều nhìn từ cái đau của mình: Nhà nước sợ lệch vĩ mô, doanh nghiệp sợ lỗ, lao động sợ hụt sống, người dân sợ chi phí đội lên từng ngày.",
-    lesson: "Nếu ai cũng đẩy phần đau sang người khác, hệ thống sẽ mất ổn định rất nhanh; còn nếu biết chia sẻ cú sốc hợp lý, xã hội sẽ dễ thở hơn.",
+    message:
+      "Cú sốc giá là bài toán phân chia gánh nặng. Ai giữ được phần mình thì thường đang đẩy áp lực sang phần khác.",
+    lesson:
+      "Không có đáp án hoàn hảo cho tất cả. Nếu chỉ cố bảo vệ mình thì hệ thống dễ lệch hoặc vỡ.",
   },
   {
     id: 2,
     title: "Mâu thuẫn tiền lương và lợi nhuận",
     context:
-      "Đơn hàng sát hạn, doanh nghiệp than chi phí quá căng, người lao động thì bức xúc vì lương không theo kịp giá. Chỉ cần lệch một nhịp là từ căng thẳng chuyển sang combat ngay.",
+      "Đơn hàng đang sát hạn. Doanh nghiệp than chi phí cao, lợi nhuận mỏng. Người lao động bức xúc vì lương không theo kịp giá. Không xử lý tốt là dễ nổ xung đột ngay tại nơi làm việc.",
+    turnOrder: ["business", "worker", "state", "citizen"],
     roles: {
       state: {
         question:
-          "Doanh nghiệp và người lao động đang chuẩn bị solo. Nếu là Nhà nước, bạn nhảy vào kiểu nào để hạ nhiệt mà vẫn giữ được sản xuất?",
+          "Lương đang là điểm nóng và quan hệ lao động kéo theo cả ổn định sản xuất. Nhà nước vào cuộc kiểu nào để hạ nhiệt mà không làm lệch nhịp hệ thống?",
+        questionVariants: [
+          {
+            id: "when-wage-hot-and-hard",
+            when: { business: ["B", "D"], worker: ["A", "C"] },
+            question:
+              "Quan hệ lao động đang nóng lên rõ. Nhà nước vào cuộc kiểu nào?",
+          },
+          {
+            id: "when-there-is-negotiation-gap",
+            when: { worker: ["B"], business: ["A", "C"] },
+            question:
+              "Đã có khe để đàm phán. Nhà nước ưu tiên cơ chế nào?",
+          },
+        ],
         options: [
           {
             id: "A",
-            label: "Khung lộ trình + thưởng năng suất",
+            label: "Khung tăng theo lộ trình + đối thoại bắt buộc",
             text:
-              "Đặt khung tăng lương theo lộ trình, gắn với thưởng năng suất để hai bên còn chỗ thương lượng. Không bên nào được tất cả ngay, nhưng xung đột dễ hạ nhiệt hơn.",
+              "Lập khung tăng theo lộ trình, gắn thưởng năng suất và đối thoại bắt buộc. Không bên nào được tất cả ngay, nhưng xung đột dễ hạ nhiệt hơn.",
             rolePoints: { state: 2 },
             macro: { growth: 1, equity: 2, stability: 2 },
             system: { rigidity: -1, socialTrust: 2, marketHealth: 2, conflict: -2 },
           },
           {
             id: "B",
-            label: "Ép tăng lương đồng loạt",
+            label: "Ép tăng lương ngay trên diện rộng",
             text:
-              "Ép tăng lương đồng loạt trong thời gian ngắn để dập lửa ngay. Người lao động đỡ bức xúc nhanh, nhưng doanh nghiệp có thể phản ứng mạnh vì chi phí tăng sốc.",
+              "Ép tăng lương ngay trên diện rộng để dập lửa. Người lao động đỡ bức xúc nhanh, nhưng doanh nghiệp có thể phản ứng mạnh vì chi phí tăng sốc.",
             rolePoints: { state: -1 },
             macro: { growth: -1, equity: 2, stability: -1 },
-            system: { rigidity: 1, marketHealth: -1, conflict: 1 },
+            system: { rigidity: 1, socialTrust: 0, marketHealth: -1, conflict: 1 },
           },
           {
             id: "C",
-            label: "Giữ sức DN, lương tính sau",
+            label: "Ưu tiên giữ doanh nghiệp, lương tính sau",
             text:
-              "Giữ ưu tiên cho doanh nghiệp, tạm lùi chuyện tăng lương để bảo vệ đơn hàng và việc làm. Cách này giúp bên sản xuất đỡ ngộp, nhưng dễ làm người lao động thấy mình bị hy sinh.",
+              "Ưu tiên giữ doanh nghiệp, lương tính sau để bảo vệ đơn hàng và việc làm. Cách này giúp bên sản xuất đỡ ngộp, nhưng dễ làm người lao động thấy mình bị hy sinh.",
             rolePoints: { state: -1 },
             macro: { growth: 1, equity: -2, stability: -1 },
             system: { socialTrust: -2, conflict: 2 },
           },
           {
             id: "D",
-            label: "Kệ hai bên tự deal",
+            label: "Đứng ngoài cho hai bên tự xử",
             text:
-              "Đứng ngoài và để hai bên tự deal với nhau. Trông có vẻ 'thị trường', nhưng thiếu khung chung thì rất dễ vỡ nhịp phối hợp.",
+              "Đứng ngoài để hai bên tự xử. Trông có vẻ 'thị trường', nhưng thiếu khung chung thì quan hệ lao động dễ nóng lên.",
             rolePoints: { state: -1 },
             macro: { growth: 0, equity: -1, stability: -2 },
             system: { rigidity: -2, socialTrust: -2, marketHealth: -1, conflict: 2 },
@@ -547,142 +656,169 @@ export const GAME_ROUNDS: GameRound[] = [
         ],
       },
       business: {
-        question:
-          "Nhân sự đang nóng, còn lợi nhuận thì không phải vô hạn. Nếu là doanh nghiệp, bạn chốt bài gì để sống sót mà không đốt luôn niềm tin lao động?",
+        question: "Áp lực đơn hàng còn đó, nhưng lương đang thành điểm nóng. DN ra tín hiệu gì trước?",
         options: [
           {
             id: "A",
-            label: "Tăng từ từ + KPI rõ",
+            label: "Tăng lương theo lộ trình + thưởng năng suất",
             text:
-              "Tăng lương từ từ, nhưng đổi lại là KPI thưởng minh bạch để nhân sự thấy có đường đi lên. DN chưa quá đau một cục, còn người lao động cũng thấy có cửa.",
+              "Tăng theo lộ trình, gắn thưởng năng suất để hai bên còn chỗ thương lượng. DN chưa quá đau một cục, còn lao động cũng thấy có cửa.",
             rolePoints: { business: 2 },
             macro: { growth: 1, equity: 1, stability: 2 },
-            system: { marketHealth: 2, socialTrust: 1, conflict: -1 },
+            system: { socialTrust: 1, marketHealth: 2, conflict: -1, rigidity: 0 },
           },
           {
             id: "B",
-            label: "Không tăng, giữ đơn hàng",
+            label: "Chưa tăng, giữ sức cạnh tranh trước",
             text:
-              "Giữ nguyên lương để ưu tiên giữ giá thành và chốt đơn hàng. Doanh nghiệp đỡ nghẹt hơn, nhưng phần chịu đựng sẽ bị đẩy sang người lao động.",
+              "Chưa tăng lương để giữ sức cạnh tranh trước, lợi nhuận mỏng vẫn phải sống. Doanh nghiệp đỡ nghẹt hơn, nhưng phần chịu đựng sẽ bị đẩy sang người lao động.",
             rolePoints: { business: 1 },
             macro: { growth: 1, equity: -2, stability: -1 },
-            system: { socialTrust: -2, conflict: 2 },
+            system: { socialTrust: -2, conflict: 2, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
-            label: "Tăng mạnh để dập lửa",
+            label: "Tăng ngay để dập lửa",
             text:
-              "Tăng nhanh một nhịp để dập lửa trước, chấp nhận lợi nhuận ngắn hạn mỏng đi. Đỡ căng với lao động hơn, nhưng nếu kéo dài thì DN sẽ bị hụt sức cạnh tranh.",
+              "Tăng lương ngay để dập lửa. Người lao động đỡ bức xúc nhanh, nhưng doanh nghiệp chịu thiệt chi phí tức thời.",
             rolePoints: { business: 0 },
             macro: { growth: -1, equity: 2, stability: 0 },
-            system: { marketHealth: -1, conflict: -1 },
+            system: { marketHealth: -1, conflict: -1, socialTrust: 0, rigidity: 0 },
           },
           {
             id: "D",
-            label: "Tái cơ cấu, giảm người",
+            label: "Tái cơ cấu, giảm người để giữ biên",
             text:
-              "Tái cơ cấu và giảm người để bớt áp lực chi phí. Sổ sách có thể đẹp hơn, nhưng rủi ro xã hội và niềm tin lao động tụt khá mạnh.",
+              "Tái cơ cấu, giảm người để giữ biên lợi nhuận. DN giảm áp lực chi phí, nhưng rủi ro xã hội và niềm tin lao động tụt mạnh.",
             rolePoints: { business: 0 },
             macro: { growth: 0, equity: -2, stability: -2 },
-            system: { socialTrust: -2, conflict: 2 },
+            system: { socialTrust: -2, conflict: 2, marketHealth: 0, rigidity: 0 },
           },
         ],
       },
       worker: {
         question:
-          "Bạn là người lao động và không muốn mình thành NPC trong cuộc chơi này. Bạn chọn cách gây sức ép nào?",
+          "Lương đang chạm trần với giá. DN đang ra tín hiệu gì thì nhịp phản ứng của bạn sẽ kéo theo hệ thống theo hướng đó.",
+        questionVariants: [
+          {
+            id: "when-business-self-rescue",
+            when: { business: ["B", "D"] },
+            question:
+              "DN đang ưu tiên tự cứu trước. Team lao động phản ứng sao?",
+          },
+          {
+            id: "when-business-signals-concession",
+            when: { business: ["A", "C"] },
+            question:
+              "DN đã đưa tín hiệu nhượng bộ ở mức nào đó. Team lao động chọn cách nào?",
+          },
+        ],
         options: [
           {
             id: "A",
-            label: "Đòi tăng ngay",
+            label: "Đòi tăng lương ngay và rõ",
             text:
-              "Đòi tăng lương ngay để bắt kịp chi phí sống. Quyền lợi được đẩy lên rõ hơn, nhưng doanh nghiệp sẽ cảm thấy bị ép trong ngắn hạn.",
+              "Đòi tăng lương ngay và rõ ràng để bù chi phí sống. Quyền lợi được đẩy lên rõ hơn, nhưng doanh nghiệp sẽ thấy bị ép trong ngắn hạn.",
             rolePoints: { worker: 2 },
-            macro: { equity: 2, stability: -1 },
-            system: { conflict: 1 },
+            macro: { growth: 0, equity: 2, stability: -1 },
+            system: { socialTrust: 0, conflict: 1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "B",
-            label: "Nhận lộ trình + thưởng",
+            label: "Chấp nhận lộ trình, miễn có cam kết và giám sát",
             text:
-              "Chấp nhận đi theo lộ trình nếu lương và thưởng được cam kết đủ rõ. Không thắng lớn ngay lập tức, nhưng cơ hội giữ việc và giữ nhịp đàm phán tốt hơn nhiều.",
+              "Chấp nhận đi theo lộ trình nếu có cam kết rõ ràng và giám sát. Chưa thắng lớn ngay lập tức, nhưng xung đột dễ hạ nhiệt.",
             rolePoints: { worker: 2 },
             macro: { growth: 1, equity: 2, stability: 2 },
-            system: { socialTrust: 2, conflict: -1 },
+            system: { socialTrust: 2, conflict: -1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
             label: "Đình công cảnh báo",
             text:
-              "Đình công cảnh báo để buộc bên kia phải chú ý. Sức ép tăng rất mạnh, nhưng sản xuất và thu nhập ngắn hạn cũng dễ cùng lúc bị ảnh hưởng.",
+              "Đình công cảnh báo để buộc bên kia phải chú ý. Sức ép tăng rất mạnh, nhưng sản xuất và thu nhập ngắn hạn cũng dễ bị ảnh hưởng.",
             rolePoints: { worker: 1 },
-            macro: { growth: -1, stability: -2 },
-            system: { conflict: 3 },
+            macro: { growth: -1, equity: 0, stability: -2 },
+            system: { socialTrust: -1, conflict: 3, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "D",
-            label: "Im, giữ việc",
+            label: "Im để giữ việc",
             text:
-              "Im và giữ việc trước đã, chưa đòi thêm gì lúc này. Ít rủi ro trước mắt hơn, nhưng phần thiệt sẽ âm thầm tích lại ở phía lao động.",
+              "Im lặng để giữ việc trước. Ít rủi ro ngắn hạn hơn, nhưng phần thiệt sẽ âm thầm dồn lại.",
             rolePoints: { worker: 0 },
-            macro: { equity: -1, stability: 0 },
-            system: { socialTrust: -1 },
+            macro: { growth: 0, equity: -1, stability: 0 },
+            system: { socialTrust: -1, conflict: 0, marketHealth: 0, rigidity: 0 },
           },
         ],
       },
       citizen: {
         question:
-          "Người dân đứng ngoài nhìn drama ở xưởng và biết giá cả ngoài chợ cũng bị ảnh hưởng. Bạn sẽ nghiêng về hướng nào?",
+          "Người dân bị kéo vào cuộc chơi qua giá hàng và nhịp ổn định xã hội. Bạn đứng về hướng nào?",
+        questionVariants: [
+          {
+            id: "when-conflict-up",
+            when: { worker: ["C"] },
+            question:
+              "Quan hệ lao động đang căng, nguy cơ ảnh hưởng giá hàng và ổn định xã hội. Người dân đứng về hướng nào?",
+          },
+          {
+            id: "when-negotiation-ok",
+            when: { worker: ["B"], state: ["A"] },
+            question:
+              "Có dấu hiệu hai bên đang nhích về thỏa hiệp. Người dân ủng hộ gì?",
+          },
+        ],
         options: [
           {
             id: "A",
-            label: "Ủng hộ thỏa hiệp đôi bên",
+            label: "Ủng hộ thỏa hiệp đôi bên cùng sống",
             text:
-              "Ủng hộ phương án thỏa hiệp để cả doanh nghiệp lẫn người lao động còn đường sống. Không quá cực đoan cho bên nào, nhưng đổi lại hệ thống ổn hơn.",
+              "Ủng hộ phương án thỏa hiệp để cả doanh nghiệp lẫn người lao động còn đường sống. Hạ nhiệt nhưng vẫn giữ công bằng.",
             rolePoints: { citizen: 2 },
-            macro: { equity: 1, stability: 2 },
-            system: { socialTrust: 2, conflict: -1 },
+            macro: { growth: 0, equity: 1, stability: 2 },
+            system: { socialTrust: 2, conflict: -1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "B",
             label: "Đứng hẳn về phía lao động",
             text:
-              "Đứng hẳn về phía người lao động vì thấy họ đang gánh thiệt nhiều hơn. Công bằng tăng lên, nhưng áp lực chi phí cho doanh nghiệp cũng tăng theo.",
+              "Đứng hẳn về phía người lao động vì thấy họ gánh thiệt nhiều hơn. Công bằng tăng lên, nhưng áp lực chi phí cho doanh nghiệp cũng tăng theo.",
             rolePoints: { citizen: 1 },
-            macro: { equity: 2, stability: 0 },
-            system: { conflict: 1 },
+            macro: { growth: 0, equity: 2, stability: 0 },
+            system: { socialTrust: 0, conflict: 1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
-            label: "Giữ giá hàng cho dân",
+            label: "Ưu tiên giữ giá hàng ổn định",
             text:
-              "Ưu tiên giữ giá hàng, không muốn chi phí từ nhà máy bị pass hết sang người mua. Dân đỡ đau hơn, nhưng DN sẽ bị bó thêm một lớp áp lực.",
+              "Ưu tiên giữ giá hàng ổn định để chi phí không bị pass hết sang người mua. Dân bớt đau, thị trường cũng bớt méo.",
             rolePoints: { citizen: 1 },
             macro: { growth: 0, equity: 1, stability: 1 },
-            system: { marketHealth: 1 },
+            system: { marketHealth: 1, conflict: 0, socialTrust: 0, rigidity: 0 },
           },
           {
             id: "D",
-            label: "Miễn rẻ là được",
+            label: "Miễn hàng rẻ là được",
             text:
-              "Không quan tâm ai thiệt ai lời, miễn giá cuối cùng vẫn rẻ là được. Nghe tiện thật, nhưng rất dễ đẩy cuộc chơi vào tâm thế mạnh ai nấy giữ phần mình.",
+              "Không quan tâm ai thiệt ai lời, miễn hàng rẻ là được. Nghe tiện thật, nhưng xã hội vẫn mất động lực thương lượng.",
             rolePoints: { citizen: -1 },
-            macro: { equity: -1 },
-            system: { socialTrust: -1 },
+            macro: { growth: 0, equity: -1, stability: 0 },
+            system: { socialTrust: -1, conflict: 0, marketHealth: 0, rigidity: 0 },
           },
         ],
       },
     },
     synergyRules: [
       {
-        id: "wage-negotiated-balance",
-        label: "Thương lượng có neo",
+        id: "wage_negotiated_balance",
+        label: "Chuỗi đẹp thương lượng",
         text:
-          "Khi Nhà nước tạo khung, doanh nghiệp tăng theo lộ trình và lao động chấp nhận cơ chế thưởng, hệ thống dễ ổn định hơn.",
+          "DN tăng theo lộ trình, worker chấp nhận cơ chế có neo, State lập khung và citizen ủng hộ thỏa hiệp.",
         if: {
-          state: ["A"],
           business: ["A"],
           worker: ["B"],
+          state: ["A"],
           citizen: ["A", "C"],
         },
         bonus: {
@@ -695,56 +831,109 @@ export const GAME_ROUNDS: GameRound[] = [
     ],
     conflictRules: [
       {
-        id: "wage-free-for-all",
-        label: "Mặc ai nấy xoay",
+        id: "wage_gridlock",
+        label: "Chuỗi bế tắc",
         text:
-          "Nếu Nhà nước đứng ngoài, doanh nghiệp cứng và lao động bùng nổ thì xung đột tăng rất nhanh.",
+          "DN giữ thế cứng, worker phản ứng mạnh trong khi State ưu tiên giữ sai nhịp. Citizen cũng chọn hướng kéo căng lên.",
         if: {
-          state: ["D"],
           business: ["B"],
+          worker: ["A"],
+          state: ["C"],
+          citizen: ["B"],
+        },
+        penalty: {
+          equity: 0,
+          stability: -2,
+          system: { socialTrust: -2, conflict: 2 },
+        },
+      },
+      {
+        id: "wage_conflict_blast",
+        label: "Chuỗi nổ xung đột",
+        text:
+          "DN chọn cách cứng, worker bùng mạnh, State siết theo hướng cực đoan và citizen cũng đi theo. Xung đột bị đẩy lên mức khó hạ nhiệt.",
+        if: {
+          business: ["D", "B"],
           worker: ["C"],
+          state: ["D"],
           citizen: ["D"],
         },
         penalty: {
+          growth: -1,
+          equity: -1,
           stability: -3,
           system: { socialTrust: -3, conflict: 4 },
         },
       },
+      {
+        id: "wage_locked_in_rigidity",
+        label: "Chuỗi ép cứng",
+        text:
+          "DN ép cứng, worker bị chia rẽ giữa đòi và phản ứng sâu, State cũng đi vào mode kiểm soát. Citizen lại ưu tiên hướng kéo thêm bất cân đối.",
+        if: {
+          business: ["B"],
+          worker: ["A", "C"],
+          state: ["B"],
+          citizen: ["C"],
+        },
+        penalty: {
+          equity: 1,
+          stability: -1,
+          system: { rigidity: 2, marketHealth: -1, conflict: 1 },
+        },
+      },
     ],
-    message: "Vòng này cho thấy rất rõ: tiền lương với người lao động là chuyện sống còn, nhưng với doanh nghiệp lại là chi phí; còn với Nhà nước và người dân, nó kéo theo cả ổn định và giá cả.",
-    lesson: "Nếu thiếu khung thương lượng minh bạch, cái lợi của bên này gần như sẽ bị cảm nhận như cái thiệt của bên kia.",
+    message:
+      "Lương và lợi nhuận là chỗ va trực diện giữa công bằng và cạnh tranh. Không có cơ chế thương lượng thì xung đột leo rất nhanh.",
+    lesson:
+      "Đàm phán minh bạch là cơ chế để cái lợi của bên này không bị cảm nhận như cái thiệt của bên kia.",
   },
   {
     id: 3,
     title: "Nông sản ùn tắc, chuỗi cung ứng đứt",
     context:
-      "Nông sản vào vụ nhưng đầu ra nghẽn, giá tại vườn rơi mạnh còn giá tới tay người mua lại không hề rẻ như kỳ vọng. Nhìn đâu cũng thấy một kiểu thiệt khác nhau.",
+      "Nông sản đang vào vụ nhưng đầu ra nghẽn. Giá tại nguồn rớt mạnh, hàng hóa ùn ứ, chi phí logistics tăng. Người sản xuất nhìn hàng đầy mà vẫn thiệt.",
+    turnOrder: ["business", "state", "worker", "citizen"],
     roles: {
       state: {
         question:
-          "Nông sản đang kẹt cứng ở giữa đường. Nếu là Nhà nước, bạn mở map kiểu nào để cứu dòng chảy thay vì chỉ dập lửa tạm thời?",
+          "Đầu ra nghẽn khiến lợi ích bị kẹt ở giữa chuỗi. Nhà nước phải mở đường nào để dòng chảy chạy lại mà không tạo méo hệ thống?",
+        questionVariants: [
+          {
+            id: "when-business-open-flow",
+            when: { business: ["A", "C"] },
+            question:
+              "Doanh nghiệp đã bắt đầu hấp thụ hàng. Nhà nước tiếp lực bằng gì?",
+          },
+          {
+            id: "when-business-press-or-wait",
+            when: { business: ["B", "D"] },
+            question:
+              "Đầu ra yếu, DN phản ứng kém hoặc tận dụng thế yếu của người sản xuất. Nhà nước xử lý sao?",
+          },
+        ],
         options: [
           {
             id: "A",
-            label: "Logistics + sàn số + tín dụng",
+            label: "Kết nối logistics + sàn số + tín dụng ngắn hạn",
             text:
-              "Ưu tiên tháo điểm nghẽn logistics, mở đường cho sàn số và tín dụng ngắn hạn để hàng đi được. Không quá màu mè, nhưng sửa đúng chỗ đang làm cả chuỗi nghẹt thở.",
+              "Kết nối logistics, mở sàn số và tín dụng ngắn hạn để hàng đi được. Sửa đúng điểm nghẽn đang làm cả chuỗi nghẹt thở.",
             rolePoints: { state: 2 },
             macro: { growth: 2, equity: 2, stability: 1 },
             system: { rigidity: -1, socialTrust: 1, marketHealth: 2, conflict: -1 },
           },
           {
             id: "B",
-            label: "Nhà nước mua vào kéo dài",
+            label: "Mua vào cứu giá ngắn hạn",
             text:
-              "Nhà nước mua vào kéo dài để đỡ giá ngay cho người sản xuất. Cứu được trước mắt, nhưng nếu ôm lâu thì ngân sách và hiệu quả thị trường sẽ bắt đầu đuối.",
+              "Mua vào để đỡ giá ngay cho người sản xuất. Cứu được trước mắt, nhưng nếu ôm lâu thì ngân sách và hiệu quả thị trường sẽ bắt đầu đuối.",
             rolePoints: { state: -1 },
             macro: { growth: -1, equity: 1, stability: 0 },
-            system: { rigidity: 2, marketHealth: -1 },
+            system: { rigidity: 2, marketHealth: -1, socialTrust: 0, conflict: 0 },
           },
           {
             id: "C",
-            label: "Bảo hộ, dựng rào",
+            label: "Dựng rào bảo hộ để chắc",
             text:
               "Dựng rào bảo hộ để ưu tiên tiêu thụ hàng trong nước. Tạo cảm giác an toàn nhanh, nhưng nếu lạm dụng thì thị trường dễ bị trì trệ và kém cạnh tranh.",
             rolePoints: { state: -1 },
@@ -753,7 +942,7 @@ export const GAME_ROUNDS: GameRound[] = [
           },
           {
             id: "D",
-            label: "Thị trường tự xử",
+            label: "Để thị trường tự xử",
             text:
               "Không hỗ trợ đặc biệt, để mọi thứ tự xoay theo thị trường. Nhìn thì gọn, nhưng người yếu thế trong chuỗi thường là người chịu đòn đầu tiên.",
             rolePoints: { state: -1 },
@@ -764,118 +953,146 @@ export const GAME_ROUNDS: GameRound[] = [
       },
       business: {
         question:
-          "Nguồn hàng đang nhiều, giá tại vườn đang thấp. Nếu là doanh nghiệp, bạn chơi bài nào để có lợi mà không bị xem là ép người yếu thế?",
+          "Nguồn hàng đang nhiều nhưng chuỗi lưu thông lag nặng. DN vào thế nào?",
         options: [
           {
             id: "A",
-            label: "Thu mua + sơ chế + kho lạnh",
+            label: "Mở thu mua, tăng sơ chế và kho lạnh",
             text:
-              "Mở thu mua, đầu tư sơ chế và kho lạnh để hàng không bị bán tháo. DN có thêm nguồn cung, còn nông dân cũng đỡ bị ép giá quá sâu.",
+              "Mở thu mua, tăng sơ chế và kho lạnh để hàng không bị bán tháo. DN có thêm nguồn cung, còn nông dân cũng đỡ bị ép giá quá sâu.",
             rolePoints: { business: 2 },
             macro: { growth: 2, equity: 1, stability: 1 },
-            system: { marketHealth: 2, socialTrust: 1 },
+            system: { socialTrust: 1, marketHealth: 2, conflict: 0, rigidity: 0 },
           },
           {
             id: "B",
-            label: "Ép giá mạnh",
+            label: "Ép giá vì bên kia đang yếu thế",
             text:
-              "Tận dụng lúc nông dân yếu thế để ép giá thật sâu. Lợi nhuận ngắn hạn có thể đẹp, nhưng niềm tin và cảm giác công bằng sẽ tụt rất nhanh.",
+              "Ép giá vì bên kia đang yếu thế. Lợi nhuận ngắn hạn có thể đẹp, nhưng niềm tin và cảm giác công bằng sẽ tụt rất nhanh.",
             rolePoints: { business: 1 },
             macro: { growth: 1, equity: -2, stability: -1 },
-            system: { socialTrust: -2, conflict: 2 },
+            system: { socialTrust: -2, conflict: 2, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
-            label: "Đẩy bán qua sàn",
+            label: "Đẩy mạnh bán qua sàn và kênh online",
             text:
-              "Đẩy mạnh bán qua sàn và kênh trực tiếp để rút ngắn trung gian. Đây là cách kiếm tiền mà vẫn giúp chuỗi lưu thông thông hơn.",
+              "Đẩy mạnh bán qua sàn và kênh online để rút ngắn trung gian. Đây là cách kiếm tiền mà vẫn giúp chuỗi lưu thông thông hơn.",
             rolePoints: { business: 2 },
             macro: { growth: 2, equity: 1, stability: 1 },
-            system: { marketHealth: 2 },
+            system: { socialTrust: 0, marketHealth: 2, conflict: 0, rigidity: 0 },
           },
           {
             id: "D",
-            label: "Đứng ngoài, đợi rẻ nữa",
+            label: "Đứng ngoài, chờ giá rơi thêm",
             text:
               "Đứng ngoài chờ giá rơi sâu hơn mới vào mua. Cách này an toàn cho DN, nhưng lại kéo dài thêm cơn nghẽn cho cả chuỗi.",
             rolePoints: { business: 0 },
             macro: { growth: -1, equity: -1, stability: -1 },
-            system: { socialTrust: -1 },
+            system: { socialTrust: -1, marketHealth: 0, conflict: 1, rigidity: 0 },
           },
         ],
       },
       worker: {
         question:
-          "Bạn là lao động trong chuỗi cung ứng và cả hệ đang lag. Bạn chọn cách nào để không bị cuốn đi cùng cơn nghẽn này?",
+          "Đầu ra đang bị tắc hoặc vừa bắt đầu mở. Team lao động sẽ tham gia theo hướng nào để quyền lợi không bị bỏ lại?",
+        questionVariants: [
+          {
+            id: "when-chain-opened",
+            when: { state: ["A"] },
+            question:
+              "Đầu ra đang có đường mở lại. Team lao động chọn cách tham gia nào?",
+          },
+          {
+            id: "when-chain-still-lag",
+            when: { state: ["B", "C", "D"] },
+            question:
+              "Hàng còn tắc, việc tăng nhưng quyền lợi chưa rõ. Team lao động phản ứng sao?",
+          },
+        ],
         options: [
           {
             id: "A",
-            label: "Tăng ca, bốc xếp, phân loại",
+            label: "Hỗ trợ tăng ca, phân loại, bốc xếp để đẩy hàng",
             text:
-              "Sẵn sàng tăng ca, bốc xếp và phân loại để đẩy hàng ra nhanh. Công sức bỏ ra nhiều hơn, nhưng đổi lại cả chuỗi có cơ hội hồi nhịp.",
+              "Sẵn sàng tăng ca, phân loại, bốc xếp để đẩy hàng ra nhanh. Đổi lại cả chuỗi có cơ hội hồi nhịp.",
             rolePoints: { worker: 2 },
-            macro: { growth: 1, stability: 1 },
-            system: { marketHealth: 1 },
+            macro: { growth: 1, equity: 0, stability: 1 },
+            system: { socialTrust: 0, marketHealth: 1, conflict: 0, rigidity: 0 },
           },
           {
             id: "B",
-            label: "Đòi thêm tiền công",
+            label: "Workload tăng thì tiền công cũng phải tăng",
             text:
-              "Yêu cầu tăng tiền công vì workload tăng mạnh. Chính đáng cho phía lao động, nhưng cũng tạo thêm áp lực chi phí cho doanh nghiệp đang xoay xở.",
+              "Workload tăng thì tiền công cũng phải tăng. Chính đáng và ít 'đánh đổi' vào niềm tin.",
             rolePoints: { worker: 2 },
-            macro: { equity: 2, stability: 0 },
-            system: { conflict: 1 },
+            macro: { growth: 0, equity: 2, stability: 0 },
+            system: { socialTrust: 0, marketHealth: 0, conflict: 1, rigidity: 0 },
           },
           {
             id: "C",
-            label: "Không rõ quyền lợi thì nghỉ",
+            label: "Không rõ quyền lợi thì nghỉ cho khỏe",
             text:
               "Nếu quyền lợi không rõ ràng thì nghỉ luôn khỏi chuỗi. Bảo vệ bản thân được phần nào, nhưng cả hệ thống sẽ càng thiếu người ở lúc đang cần nhất.",
             rolePoints: { worker: 1 },
-            macro: { growth: -1, stability: -2 },
-            system: { conflict: 2 },
+            macro: { growth: -1, equity: 0, stability: -2 },
+            system: { socialTrust: -1, marketHealth: 0, conflict: 2, rigidity: 0 },
           },
           {
             id: "D",
-            label: "Học thêm kỹ năng bán, sàn số",
+            label: "Học thêm kỹ năng bán hàng/sàn số",
             text:
               "Học thêm kỹ năng bán hàng, đóng gói hoặc dùng sàn số để bớt lệ thuộc một mắt xích. Không giải quyết hết mọi thứ ngay, nhưng tăng cơ hội thích nghi lâu dài.",
             rolePoints: { worker: 2 },
             macro: { growth: 1, equity: 1, stability: 1 },
-            system: { marketHealth: 1, socialTrust: 1 },
+            system: { socialTrust: 1, marketHealth: 1, conflict: 0, rigidity: 0 },
           },
         ],
       },
       citizen: {
         question:
-          "Nông sản ở vườn rất rẻ mà nông dân vẫn khổ, còn ngoài chợ chưa chắc rẻ. Nếu là người dân, bạn phản ứng sao cho vừa có lý vừa có tình?",
+          "Người dân có thể giúp chuỗi bớt méo bằng cách chọn hành vi mua/ủng hộ nào. Bạn chọn theo nhịp nào?",
+        questionVariants: [
+          {
+            id: "when-better-outflow",
+            when: { state: ["A"] },
+            question:
+              "Nông sản đã có đường ra hơn nhưng chưa thật sự ổn định. Người dân phản ứng sao?",
+          },
+          {
+            id: "when-still-mess",
+            when: { state: ["B", "C", "D"] },
+            question:
+              "Giá tại nguồn rớt nhưng người làm ra vẫn khổ. Người dân chọn hành vi nào?",
+          },
+        ],
         options: [
           {
             id: "A",
-            label: "Mua ủng hộ, chọn kênh minh bạch",
+            label: "Mua ủng hộ hàng nội địa, ưu tiên kênh minh bạch",
             text:
-              "Ưu tiên mua qua kênh minh bạch, chấp nhận không săn rẻ bằng mọi giá. Bạn bỏ thêm chút cân nhắc để người sản xuất đỡ bị chèn ép.",
+              "Mua ủng hộ hàng nội địa, ưu tiên kênh minh bạch. Giúp người làm ra bớt bị ép giá, nhưng vẫn cân nhắc hiệu quả mua sắm.",
             rolePoints: { citizen: 2 },
             macro: { growth: 1, equity: 1, stability: 1 },
-            system: { socialTrust: 1, conflict: -1 },
+            system: { socialTrust: 1, conflict: -1, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "B",
-            label: "Săn rẻ hết cỡ",
+            label: "Chỉ săn rẻ, càng ép càng tốt",
             text:
-              "Chỉ săn giá rẻ nhất, càng rẻ càng tốt. Tiết kiệm được cho mình, nhưng rất dễ tiếp tay cho vòng xoáy ép giá ở phía dưới.",
+              "Chỉ săn rẻ, càng ép càng tốt. Tiết kiệm được cho mình, nhưng dễ tiếp tay cho vòng xoáy ép giá ở phía dưới.",
             rolePoints: { citizen: 0 },
-            macro: { equity: -1 },
-            system: { socialTrust: -1 },
+            macro: { growth: 0, equity: -1, stability: 0 },
+            system: { socialTrust: -1, conflict: 0, marketHealth: 0, rigidity: 0 },
           },
           {
             id: "C",
-            label: "Ủng hộ bán qua sàn",
+            label: "Ủng hộ bán qua sàn, truy xuất rõ ràng",
             text:
-              "Ủng hộ bán qua sàn có truy xuất rõ ràng để rút bớt trung gian. Người mua yên tâm hơn, còn thị trường cũng minh bạch hơn.",
+              "Ủng hộ bán qua sàn với truy xuất rõ ràng để rút bớt trung gian. Người mua yên tâm hơn, thị trường cũng minh bạch hơn.",
             rolePoints: { citizen: 2 },
             macro: { growth: 1, equity: 1, stability: 1 },
-            system: { marketHealth: 2, socialTrust: 1 },
+            system: { socialTrust: 1, marketHealth: 2, conflict: 0, rigidity: 0 },
           },
           {
             id: "D",
@@ -883,18 +1100,18 @@ export const GAME_ROUNDS: GameRound[] = [
             text:
               "Không quan tâm chuyện phía sau, cứ mua theo thói quen. Nhẹ đầu thật, nhưng cũng là cách để nút thắt cứ nằm đó mãi.",
             rolePoints: { citizen: -1 },
-            macro: { equity: -1, stability: -1 },
-            system: { socialTrust: -1 },
+            macro: { growth: 0, equity: -1, stability: -1 },
+            system: { socialTrust: -1, conflict: 0, marketHealth: 0, rigidity: 0 },
           },
         ],
       },
     },
     synergyRules: [
       {
-        id: "agri-open-flow",
-        label: "Mở nút thắt chuỗi cung ứng",
+        id: "agri_chain_good",
+        label: "Chuỗi đẹp thông dòng",
         text:
-          "Khi cả 4 vai cùng chọn hướng thông dòng chảy hàng hóa, hiệu quả và công bằng cùng được cải thiện.",
+          "Doanh nghiệp mở đường bằng thu mua/sơ chế, Nhà nước kết nối lưu thông, lao động tham gia tích cực và người dân chọn kênh minh bạch.",
         if: {
           state: ["A"],
           business: ["A", "C"],
@@ -911,36 +1128,89 @@ export const GAME_ROUNDS: GameRound[] = [
     ],
     conflictRules: [
       {
-        id: "agri-everyone-for-self",
-        label: "Mạnh ai nấy né",
+        id: "agri_chain_weak_exploit",
+        label: "Chuỗi tận dụng thế yếu (penalty)",
         text:
-          "Nếu các bên đều né trách nhiệm, chuỗi cung ứng càng tắc và niềm tin tụt tiếp.",
+          "DN ép giá lúc thế yếu, Nhà nước không mở đường đúng nhịp, lao động bị kéo vào phản ứng bất cân đối và người dân cũng chọn phương án tiếp tay.",
         if: {
-          state: ["D"],
-          business: ["B", "D"],
+          business: ["B"],
+          state: ["B", "D"],
+          worker: ["B", "C"],
+          citizen: ["B"],
+        },
+        penalty: {
+          growth: 0,
+          equity: -2,
+          stability: -1,
+          system: { socialTrust: -2, conflict: 2 },
+        },
+      },
+      {
+        id: "agri_chain_long_break",
+        label: "Chuỗi đứt gãy kéo dài (penalty nặng)",
+        text:
+          "DN đứng ngoài chờ giá tiếp tục, Nhà nước cũng để thị trường tự xử hoặc dựng rào sai điểm, lao động không vào đúng nhịp và người dân chọn hành vi làm méo thêm.",
+        if: {
+          business: ["D"],
+          state: ["D", "C"],
           worker: ["C"],
-          citizen: ["B", "D"],
+          citizen: ["D"],
         },
         penalty: {
           growth: -2,
           equity: -2,
-          stability: -3,
-          system: { socialTrust: -3, conflict: 3 },
+          stability: -2,
+          system: { socialTrust: -2, marketHealth: -2, conflict: 2 },
+        },
+      },
+      {
+        id: "agri_chain_short_savior",
+        label: "Cứu ngắn hạn nhưng kém bền (penalty cấu trúc nhẹ)",
+        text:
+          "DN mở nút theo cách nhanh, Nhà nước tiếp lực không khớp, lao động làm đúng một phần và người dân cũng chỉ dừng ở mức hỗ trợ tối thiểu.",
+        if: {
+          business: ["A"],
+          state: ["B"],
+          worker: ["A"],
+          citizen: ["A"],
+        },
+        penalty: {
+          growth: 0,
+          equity: 0,
+          stability: 1,
+          system: { rigidity: 2, marketHealth: -1, socialTrust: 0, conflict: 0 },
         },
       },
     ],
-    message: "Điểm khó của vòng này là người sản xuất, doanh nghiệp, lao động và người tiêu dùng đều thấy mình có lý. Nhưng nếu chỉ nhìn từng mảnh riêng lẻ, cả chuỗi sẽ tiếp tục nghẽn.",
-    lesson: "Khi chọn đúng điểm can thiệp, công bằng và hiệu quả không nhất thiết phải đứng ở hai chiến tuyến đối lập.",
+    message:
+      "Khi chuỗi lưu thông đứt, vấn đề không chỉ là “giá thấp hay cao”, mà là ai có năng lực nối lại hệ thống và ai đang bị bỏ lại.",
+    lesson:
+      "Các can thiệp phải đúng điểm nghẽn: đúng kênh, đúng thời điểm và đúng lợi ích của từng mắt xích.",
   },
   {
     id: 4,
     title: "Niềm tin thị trường suy giảm",
     context:
-      "Gian lận chất lượng, thổi thông tin và làm ăn nhập nhèm khiến người tiêu dùng mất niềm tin. Thị trường rơi vào trạng thái nhìn đâu cũng thấy nghi ngờ.",
+      "Xuất hiện các vụ gian lận chất lượng, thông tin mập mờ, quảng bá sai lệch. Người tiêu dùng mất niềm tin, thị trường bắt đầu chững lại vì ai cũng nghi ngờ nhau.",
+    turnOrder: ["business", "state", "worker", "citizen"],
     roles: {
       state: {
         question:
-          "Trust thị trường đang tụt rất sâu. Nếu là Nhà nước, bạn chọn mode nào để kéo lại niềm tin mà không bóp nghẹt toàn bộ hoạt động kinh doanh?",
+          "Thị trường đang mất trust. DN đang cứu mình bằng cách nào sẽ kéo theo cách Nhà nước phải hoàn thiện sân chơi. Nhà nước bật mode nào để niềm tin quay lại mà không bóp nghẹt thị trường?",
+        questionVariants: [
+          {
+            id: "when-business-is-transparent",
+            when: { business: ["A", "D"] },
+            question:
+              "Doanh nghiệp đã có tín hiệu làm thật. Nhà nước hoàn thiện sân chơi theo hướng nào?",
+          },
+          {
+            id: "when-business-fake-it",
+            when: { business: ["B", "C"] },
+            question:
+              "Thị trường có dấu hiệu gian lận/đánh tráo niềm tin. Nhà nước bật mode nào?",
+          },
+        ],
         options: [
           {
             id: "A",
@@ -982,7 +1252,7 @@ export const GAME_ROUNDS: GameRound[] = [
       },
       business: {
         question:
-          "Người mua đang nhìn doanh nghiệp bằng ánh mắt đầy nghi ngờ. Nếu là doanh nghiệp, bạn cứu danh tiếng kiểu gì?",
+          "Thị trường đang mất trust. DN chọn cách cứu mình và cứu danh tiếng kiểu nào?",
         options: [
           {
             id: "A",
@@ -1024,7 +1294,21 @@ export const GAME_ROUNDS: GameRound[] = [
       },
       worker: {
         question:
-          "Nếu đang ở trong chuỗi làm việc và thấy có sai phạm, bạn là người lao động thì sẽ xử lý ra sao?",
+          "Nếu tổ chức đang cố giữ chuẩn thì worker xử lý vai trò thế nào. Còn nếu có dấu hiệu nhập nhèm, worker làm gì để không tiếp tay cho cái bẩn kéo dài?",
+        questionVariants: [
+          {
+            id: "when-organization-trying-to-fix",
+            when: { business: ["A", "D"] },
+            question:
+              "Bên trong đã có nỗ lực sửa chuẩn, worker xử lý vai trò của mình thế nào?",
+          },
+          {
+            id: "when-organization-sketchy",
+            when: { business: ["B", "C"] },
+            question:
+              "Thấy sai phạm nhưng hệ thống chưa chắc đã sạch. Worker làm gì?",
+          },
+        ],
         options: [
           {
             id: "A",
@@ -1066,7 +1350,21 @@ export const GAME_ROUNDS: GameRound[] = [
       },
       citizen: {
         question:
-          "Khi niềm tin thị trường tụt đáy, nếu là người dân bạn sẽ phản ứng theo kiểu nào?",
+          "Người dân phản ứng dựa trên việc thị trường đã bắt đầu sửa thật hay vẫn nhập nhèm. Bạn chọn cách nào để không biến niềm tin thành thứ bị thao túng?",
+        questionVariants: [
+          {
+            id: "when-market-starts-fixing",
+            when: { state: ["A", "B"] },
+            question:
+              "Niềm tin chưa hồi hoàn toàn nhưng đã có bên làm thật. Người dân phản ứng sao?",
+          },
+          {
+            id: "when-market-still-mess",
+            when: { state: ["C", "D"] },
+            question:
+              "Tin giả, hàng kém, quảng bá quá đà đang làm mọi người mệt. Người dân chọn cách nào?",
+          },
+        ],
         options: [
           {
             id: "A",
@@ -1109,8 +1407,8 @@ export const GAME_ROUNDS: GameRound[] = [
     },
     synergyRules: [
       {
-        id: "trust-rebuild",
-        label: "Khôi phục niềm tin",
+        id: "trust_chain_good",
+        label: "Chuỗi đẹp khôi phục trust",
         text:
           "Nhà nước siết đúng chỗ, doanh nghiệp minh bạch, lao động dám báo sai phạm và người dân tiêu dùng thông minh sẽ kéo niềm tin thị trường đi lên.",
         if: {
@@ -1129,256 +1427,367 @@ export const GAME_ROUNDS: GameRound[] = [
     ],
     conflictRules: [
       {
-        id: "trust-collapse",
-        label: "Mất trust dây chuyền",
+        id: "trust_chain_make-up",
+        label: "Chuỗi làm màu",
         text:
-          "Khi quản lý lệch pha với doanh nghiệp làm ẩu, người lao động im lặng và người dân chọn bừa, niềm tin tụt rất nhanh.",
+          "DN làm màu, Nhà nước cũng dập theo hướng méo, worker và citizen đi theo nhịp khiến niềm tin không hồi lại được.",
         if: {
-          state: ["C", "D"],
-          business: ["B", "C"],
-          worker: ["B", "D"],
-          citizen: ["C", "D"],
+          business: ["B"],
+          state: ["B"],
+          worker: ["B"],
+          citizen: ["D"],
         },
         penalty: {
-          stability: -3,
-          system: { socialTrust: -4, marketHealth: -3, conflict: 3 },
+          stability: -2,
+          system: { socialTrust: -3, marketHealth: -1, conflict: 1 },
+        },
+      },
+      {
+        id: "trust_chain_break",
+        label: "Chuỗi phá trust (penalty nặng)",
+        text:
+          "DN đánh tráo niềm tin, Nhà nước không dứt khoát đủ mạnh, worker buông xuôi và citizen cũng chọn cách tiếp tay. Niềm tin gãy theo dây chuyền.",
+        if: {
+          business: ["C"],
+          state: ["C", "D"],
+          worker: ["D"],
+          citizen: ["C"],
+        },
+        penalty: {
+          equity: -2,
+          stability: -2,
+          system: { socialTrust: -4, marketHealth: -3, conflict: 2 },
+        },
+      },
+      {
+        id: "trust_chain_stiff_for_peace",
+        label: "Chuỗi siết cho yên (penalty cấu trúc)",
+        text:
+          "DN chọn cách lửng chuẩn, Nhà nước siết hành chính diện rộng, worker bị kéo về im lặng và citizen cũng chọn hướng quá an toàn. Hệ thống yên nhưng trust bị mài mòn.",
+        if: {
+          business: ["B", "C"],
+          state: ["D"],
+          worker: ["B"],
+          citizen: ["A"],
+        },
+        penalty: {
+          stability: 0,
+          system: { rigidity: 3, socialTrust: -1, marketHealth: -1 },
         },
       },
     ],
-    message: "Vòng này cho thấy niềm tin không tự nhiên mà có: Nhà nước phải giữ luật chơi, doanh nghiệp phải minh bạch, lao động phải dám lên tiếng và người dân cũng phải tiêu dùng có trách nhiệm.",
-    lesson: "Khi ai cũng chọn lợi ngắn hạn cho riêng mình, trust sẽ tụt rất nhanh; mà một khi trust gãy rồi, phục hồi luôn đắt hơn tưởng tượng.",
+    message:
+      "Không có trust thì thị trường sẽ tự ăn mòn chính nó. Niềm tin không đến từ lời nói, mà đến từ hành vi nhất quán của cả hệ thống.",
+    lesson:
+      "Niềm tin không tự sinh. Nếu hành vi của từng bên chỉ tối ưu ngắn hạn, trust sẽ gãy và phục hồi luôn đắt hơn tưởng tượng.",
   },
   {
     id: 5,
     title: "Chốt gói định hướng 3 năm",
     context:
-      "Sau 4 vòng sóng gió, giờ là lúc chốt định hướng 3 năm tới. Đây không còn là xử lý một sự cố riêng lẻ nữa, mà là chọn xem xã hội muốn đi nhanh, đi chắc hay đi cùng nhau tới đâu.",
+      "Sau nhiều cú sốc và xung đột ngắn hạn, giờ là lúc chọn gói định hướng cho 3 năm tới. Không thể có tất cả mọi thứ cùng lúc. Mỗi định hướng sẽ ưu tiên nhóm này nhiều hơn nhóm khác.",
+    turnOrder: ["state", "business", "worker", "citizen"],
     roles: {
       state: {
         question:
-          "Nếu phải chốt một hướng lớn cho 3 năm tới, ở vai Nhà nước bạn pick lối nào để vừa giữ nhịp phát triển vừa không làm xã hội lệch hẳn sang một phía?",
+          "Nếu phải chốt hướng lớn cho 3 năm tới, ở vai Nhà nước bạn kéo về phía nào?",
         options: [
           {
             id: "A",
-            label: "Tăng trưởng thần tốc",
+            label: "Tăng trưởng bằng mọi giá",
             text:
-              "Đẩy tăng trưởng lên trước, chấp nhận nới lỏng chuẩn công bằng và an sinh trong một thời gian. Máy kinh tế có thể chạy nhanh hơn, nhưng những chỗ yếu sẽ bị bỏ lại rõ hơn.",
+              "Tăng trưởng thần tốc, chạy trước tính sau. Ưu tiên tăng trưởng lên trước, chấp nhận những chỗ yếu bị bỏ lại rõ hơn.",
             rolePoints: { state: -1 },
-            macro: { growth: 2, equity: -2, stability: -1 },
-            system: { socialTrust: -2, conflict: 2 },
+            macro: {},
+            system: {},
           },
           {
             id: "B",
-            label: "An sinh ngắn hạn là số 1",
+            label: "An sinh ngắn hạn là trung tâm",
             text:
               "Ưu tiên an sinh và hỗ trợ thu nhập trong ngắn hạn để giảm áp lực xã hội. Dễ tạo cảm giác ấm hơn trước mắt, nhưng dư địa phát triển về sau có thể bị mỏng đi.",
             rolePoints: { state: 0 },
-            macro: { growth: -1, equity: 2, stability: 0 },
-            system: { rigidity: 1, socialTrust: 1, marketHealth: -1 },
+            macro: {},
+            system: {},
           },
           {
             id: "C",
-            label: "Gói cân bằng ba mục tiêu",
+            label: "Cân bằng: năng suất + an sinh mục tiêu + kỷ cương thị trường",
             text:
-              "Chọn gói cân bằng: tăng năng suất, an sinh có mục tiêu và giữ kỷ cương thị trường. Không phe nào sướng tuyệt đối, nhưng hệ thống bền hơn nhiều.",
+              "Chọn gói cân bằng: năng suất đi cùng an sinh mục tiêu và kỷ cương thị trường. Không phe nào sướng tuyệt đối, nhưng hệ thống bền hơn nhiều.",
             rolePoints: { state: 2 },
-            macro: { growth: 2, equity: 2, stability: 2 },
-            system: { socialTrust: 2, marketHealth: 2, conflict: -2 },
+            macro: {},
+            system: {},
           },
           {
             id: "D",
-            label: "Quản thật chặt cho chắc",
+            label: "Kiểm soát hành chính mạnh để giữ trật tự",
             text:
-              "Quản thật chặt để đỡ loạn, chấp nhận hy sinh độ linh hoạt của thị trường. Trật tự tăng lên, nhưng không khí phát triển và đổi mới có thể bị bó lại.",
+              "Quản thật chặt để đỡ loạn. Trật tự tăng lên, nhưng độ linh hoạt và động lực đổi mới có thể bị bó lại.",
             rolePoints: { state: 0 },
-            macro: { growth: -1, equity: -1, stability: 1 },
-            system: { rigidity: 2, socialTrust: -1, marketHealth: -2, conflict: 1 },
+            macro: {},
+            system: {},
           },
         ],
       },
       business: {
         question:
-          "Nếu là doanh nghiệp, bạn muốn 3 năm tới sống khỏe theo kiểu nào: tăng tốc mạnh, xin đệm an toàn, hay chơi đường dài?",
+          "Nhà nước đã nghiêng về một hướng. Doanh nghiệp muốn kéo tương lai về phía nào để mình sống khỏe?",
         options: [
           {
             id: "A",
-            label: "Bơm tốc độ, chạy trước",
+            label: "Bơm tốc độ, tăng trưởng trước",
             text:
-              "Bơm tốc độ để mở rộng thật nhanh, chốt tăng trưởng trước đã. DN có cơ hội bứt mạnh, nhưng phần chi phí xã hội dễ bị đẩy ngược cho bên khác gánh.",
+              "Bơm tốc độ để mở rộng thật nhanh, chốt tăng trưởng trước đã.",
             rolePoints: { business: 2 },
-            macro: { growth: 2, equity: -2, stability: -1 },
-            system: { socialTrust: -1, conflict: 1 },
+            macro: {},
+            system: {},
           },
           {
             id: "B",
-            label: "Xin hỗ trợ nhiều cho an toàn",
+            label: "Xin hỗ trợ nhiều để giữ an toàn",
             text:
-              "Xin hỗ trợ nhiều để giảm rủi ro và giữ cảm giác an toàn. Ít áp lực hơn cho DN, nhưng cũng khiến thị trường phụ thuộc hơn vào che chở bên ngoài.",
+              "Xin hỗ trợ nhiều để giảm rủi ro và giữ cảm giác an toàn.",
             rolePoints: { business: 0 },
-            macro: { growth: 0, equity: 0, stability: 0 },
-            system: { rigidity: 1, marketHealth: -1 },
+            macro: {},
+            system: {},
           },
           {
             id: "C",
-            label: "Đầu tư năng suất, minh bạch",
+            label: "Đầu tư năng suất, cạnh tranh tử tế, minh bạch lâu dài",
             text:
-              "Đầu tư vào công nghệ, con người và quản trị để cạnh tranh tử tế trong đường dài. Không phải cú nổ nhanh nhất, nhưng là nền để DN lớn lên mà không bị ghét.",
+              "Đầu tư năng suất, cạnh tranh tử tế, minh bạch lâu dài.",
             rolePoints: { business: 2 },
-            macro: { growth: 2, equity: 1, stability: 2 },
-            system: { socialTrust: 2, marketHealth: 2 },
+            macro: {},
+            system: {},
           },
           {
             id: "D",
-            label: "Xin bảo hộ để đỡ đau",
+            label: "Xin cơ chế bảo hộ, đỡ phải cạnh tranh gắt",
             text:
-              "Xin cơ chế bảo hộ để bớt đau khi cạnh tranh. Dễ thở cho DN hiện tại, nhưng thị trường nói chung sẽ mất động lực nâng chất.",
+              "Xin cơ chế bảo hộ để đỡ đau khi cạnh tranh.",
             rolePoints: { business: 1 },
-            macro: { growth: 0, equity: -1, stability: 0 },
-            system: { rigidity: 2, marketHealth: -2 },
+            macro: {},
+            system: {},
           },
         ],
       },
       worker: {
         question:
-          "Nếu là người lao động, bạn muốn 3 năm tới theo vibe nào: an toàn trước mắt, phúc lợi nhanh, hay vừa lương vừa cơ hội đi lên?",
+          "Hai hướng trên đang tạo ra tương lai kiểu nào. Người lao động muốn đẩy cán cân theo phía nào?",
         options: [
           {
             id: "A",
-            label: "Miễn có việc là được",
+            label: "Miễn có việc là được, quyền lợi tính sau",
             text:
-              "Miễn có việc là được, quyền lợi tính sau. Đỡ lo ngay chuyện thất nghiệp, nhưng phần thiệt về thu nhập và vị thế sẽ âm thầm tích lại.",
+              "Miễn có việc là được, quyền lợi tính sau.",
             rolePoints: { worker: 0 },
-            macro: { growth: 1, equity: -2, stability: -1 },
-            system: { socialTrust: -1 },
+            macro: {},
+            system: {},
           },
           {
             id: "B",
-            label: "Phúc lợi trước mắt",
+            label: "Phúc lợi trước mắt càng chắc càng tốt",
             text:
-              "Ưu tiên phúc lợi chắc tay trước đã, còn tăng trưởng tính sau. Đời sống đỡ ngộp nhanh hơn, nhưng cơ hội nâng năng suất và tăng lương dài hạn có thể chậm lại.",
+              "Phúc lợi trước mắt càng chắc càng tốt.",
             rolePoints: { worker: 2 },
-            macro: { growth: -1, equity: 2, stability: 0 },
-            system: { socialTrust: 1 },
+            macro: {},
+            system: {},
           },
           {
             id: "C",
-            label: "Lương, kỹ năng, cơ hội cùng lên",
+            label: "Muốn cả lương, kỹ năng, cơ hội đi lên đều có",
             text:
-              "Muốn cả lương, kỹ năng và cơ hội đi lên cùng tăng. Đây là lựa chọn khó chiều ngay, nhưng nếu làm được thì vị thế của người lao động sẽ bền hơn.",
+              "Muốn cả lương, kỹ năng và cơ hội đi lên đều có.",
             rolePoints: { worker: 2 },
-            macro: { growth: 2, equity: 2, stability: 2 },
-            system: { socialTrust: 2, conflict: -1 },
+            macro: {},
+            system: {},
           },
           {
             id: "D",
             label: "Quản chặt để đỡ bất ổn",
             text:
-              "Chấp nhận quản chặt để đỡ bất ổn, dù cơ hội linh hoạt và tăng tốc có thể hẹp lại. An toàn hơn, nhưng cảm giác bị bó cũng tăng lên.",
+              "Chấp nhận quản chặt để đỡ bất ổn.",
             rolePoints: { worker: 0 },
-            macro: { stability: 1, equity: -1 },
-            system: { rigidity: 2, marketHealth: -1 },
+            macro: {},
+            system: {},
           },
         ],
       },
       citizen: {
         question:
-          "Nếu là người dân và phải vote cho một tương lai 3 năm tới, bạn nghiêng về gói nào nhất?",
+          "Sau khi nhìn 3 bên kia kéo định hướng, người dân chốt phiếu theo kiểu nào?",
         options: [
           {
             id: "A",
-            label: "Miễn kinh tế chạy mạnh",
+            label: "Miễn kinh tế chạy mạnh, chịu thiệt chút cũng được",
             text:
-              "Miễn kinh tế chạy mạnh thì chịu thiệt một chút cũng được. Sức bật nhìn rất đã, nhưng nhóm yếu thế sẽ dễ cảm nhận mình bị bỏ lại.",
+              "Miễn kinh tế chạy mạnh, chịu thiệt chút cũng được.",
             rolePoints: { citizen: 0 },
-            macro: { growth: 2, equity: -2, stability: -1 },
-            system: { socialTrust: -1, conflict: 1 },
+            macro: {},
+            system: {},
           },
           {
             id: "B",
-            label: "Đỡ khổ trước đã",
+            label: "Ưu tiên đỡ khổ trước đã",
             text:
-              "Ưu tiên đỡ khổ trước đã, nhất là với nhóm đang hụt hơi. Cảm giác công bằng tăng lên, nhưng nhịp tăng trưởng chung có thể bớt bốc.",
+              "Ưu tiên đỡ khổ trước đã.",
             rolePoints: { citizen: 2 },
-            macro: { growth: -1, equity: 2, stability: 0 },
-            system: { socialTrust: 1 },
+            macro: {},
+            system: {},
           },
           {
             id: "C",
-            label: "Tăng trưởng nhưng phải công bằng",
+            label: "Tăng trưởng nhưng phải công bằng và đáng tin",
             text:
-              "Muốn tăng trưởng, nhưng phải công bằng và đáng tin để người dân còn yên tâm mà sống. Không phải lựa chọn nhanh nhất, nhưng là lựa chọn dễ ở cùng lâu nhất.",
+              "Tăng trưởng nhưng phải công bằng và đáng tin.",
             rolePoints: { citizen: 2 },
-            macro: { growth: 2, equity: 2, stability: 2 },
-            system: { socialTrust: 2, marketHealth: 2, conflict: -2 },
+            macro: {},
+            system: {},
           },
           {
             id: "D",
-            label: "Kiểm soát mạnh cho chắc cú",
+            label: "Cứ kiểm soát mạnh cho chắc cú",
             text:
-              "Ủng hộ kiểm soát mạnh cho chắc cú, miễn ít biến động hơn. Tâm lý an toàn tăng lên, nhưng bầu không khí phát triển cũng dễ bị nén lại.",
+              "Cứ kiểm soát mạnh cho chắc cú.",
             rolePoints: { citizen: 0 },
-            macro: { stability: 1, equity: -1 },
-            system: { rigidity: 2, marketHealth: -2 },
+            macro: {},
+            system: {},
           },
         ],
       },
     },
-    synergyRules: [
-      {
-        id: "three-year-balanced-growth",
-        label: "Đồng thuận cân bằng",
-        text:
-          "Khi cả 4 vai cùng chấp nhận bài toán tăng trưởng đi cùng công bằng và kỷ cương, hệ thống đạt trạng thái đẹp nhất.",
-        if: {
-          state: ["C"],
-          business: ["C"],
-          worker: ["C"],
-          citizen: ["C"],
-        },
-        bonus: {
-          growth: 2,
-          equity: 2,
-          stability: 2,
-          system: { socialTrust: 3, marketHealth: 2, conflict: -3 },
-        },
-      },
-    ],
-    conflictRules: [
-      {
-        id: "growth-vs-protection",
-        label: "Tăng trưởng vọt nhưng xã hội lệch pha",
-        text:
-          "Khi Nhà nước và doanh nghiệp lao lên tăng trưởng còn lao động và người dân đòi bù đắp mạnh, hệ thống khó giữ ổn định.",
-        if: {
-          state: ["A"],
-          business: ["A"],
-          worker: ["B"],
-          citizen: ["B"],
-        },
-        penalty: {
-          stability: -3,
-          system: { socialTrust: -3, conflict: 3 },
-        },
-      },
-      {
-        id: "locked-economy",
-        label: "Khóa cứng toàn hệ",
-        text:
-          "Nếu cả 4 vai cùng nghiêng về kiểm soát cứng, thị trường sẽ thiếu động lực phát triển.",
-        if: {
-          state: ["D"],
-          business: ["D"],
-          worker: ["D"],
-          citizen: ["D"],
-        },
-        penalty: {
-          growth: -3,
-          system: { marketHealth: -4, rigidity: 4 },
-        },
-      },
-    ],
-    message: "Đây là vòng cho thấy rõ nhất chuyện không có tương lai nào chỉ toàn màu hồng cho một phía. Mỗi vai đều có điều muốn giữ, nhưng nếu kéo quá mạnh về phía mình thì cả hệ thống sẽ trả giá.",
-    lesson: "Phát triển bền không phải là làm bên nào cũng vui tuyệt đối, mà là tìm được mức phối hợp đủ chấp nhận để xã hội không trượt vào bất ổn.",
+    message:
+      "Định hướng dài hạn không phải là chọn “từ đẹp nhất”, mà là chọn mô hình phân phối lợi ích và gánh nặng.",
+    lesson: "Định hướng dài hạn không phải để bên nào cũng thắng, mà để các bên đủ chấp nhận nhau để xã hội không trượt vào bất ổn.",
+
+    synergyRules: [],
+    conflictRules: [],
+    customEffectResolver: (roleChoices) => {
+      const getDir = (rid: RoleId) => roleChoices[rid];
+      const dirs: Record<RoleId, string | null> = {
+        state: getDir("state"),
+        business: getDir("business"),
+        worker: getDir("worker"),
+        citizen: getDir("citizen"),
+      };
+
+      const allowed = new Set(["A", "B", "C", "D"]);
+      const counts: Record<"A" | "B" | "C" | "D", number> = { A: 0, B: 0, C: 0, D: 0 };
+      (Object.keys(dirs) as RoleId[]).forEach((rid) => {
+        const d = dirs[rid];
+        if (d && allowed.has(d)) counts[d as "A" | "B" | "C" | "D"] += 1;
+      });
+
+      const nonNullCount = (Object.keys(dirs) as RoleId[]).reduce((acc, rid) => (dirs[rid] ? acc + 1 : acc), 0);
+      const uniqueDirs = (Object.keys(counts) as Array<keyof typeof counts>).filter((k) => counts[k] > 0);
+
+      const directionEffect: Record<
+        "A" | "B" | "C" | "D",
+        { growth: number; equity: number; stability: number; system: Partial<SystemEffect> }
+      > = {
+        A: { growth: 2, equity: -2, stability: -1, system: { rigidity: -1, socialTrust: -2, marketHealth: 0, conflict: 2 } },
+        B: { growth: -1, equity: 2, stability: 0, system: { rigidity: 1, socialTrust: 1, marketHealth: -1, conflict: 0 } },
+        C: { growth: 2, equity: 2, stability: 2, system: { rigidity: 0, socialTrust: 2, marketHealth: 2, conflict: -2 } },
+        D: { growth: -1, equity: -1, stability: 1, system: { rigidity: 2, socialTrust: -1, marketHealth: -2, conflict: 1 } },
+      };
+
+      const roundInt = (v: number) => Math.round(v);
+
+      const base = createEmptyRoundEffect();
+
+      // Base: hội tụ / chia phe / bế tắc chiến lược (trong spec là áp vào macro/system)
+      if (nonNullCount === 4 && uniqueDirs.length === 4) {
+        // Case 3: bế tắc chiến lược
+        base.stability += -2;
+        base.system.socialTrust += -2;
+        base.system.conflict += 2;
+      } else {
+        const maxCount = Math.max(counts.A, counts.B, counts.C, counts.D);
+        if (maxCount >= 3) {
+          const finalDir = (Object.entries(counts) as Array<[keyof typeof counts, number]>).sort((a, b) => b[1] - a[1])[0][0];
+          const eff = directionEffect[finalDir as "A" | "B" | "C" | "D"];
+          base.growth += eff.growth;
+          base.equity += eff.equity;
+          base.stability += eff.stability;
+          base.system.rigidity += eff.system.rigidity ?? 0;
+          base.system.socialTrust += eff.system.socialTrust ?? 0;
+          base.system.marketHealth += eff.system.marketHealth ?? 0;
+          base.system.conflict += eff.system.conflict ?? 0;
+        } else {
+          // Case 2: trung bình có trọng số theo số vai chọn từng hướng
+          const denom = nonNullCount || 1;
+          (["A", "B", "C", "D"] as Array<"A" | "B" | "C" | "D">).forEach((d) => {
+            const c = counts[d];
+            if (!c) return;
+            const eff = directionEffect[d];
+            base.growth += (eff.growth * c) / denom;
+            base.equity += (eff.equity * c) / denom;
+            base.stability += (eff.stability * c) / denom;
+            base.system.rigidity += ((eff.system.rigidity ?? 0) * c) / denom;
+            base.system.socialTrust += ((eff.system.socialTrust ?? 0) * c) / denom;
+            base.system.marketHealth += ((eff.system.marketHealth ?? 0) * c) / denom;
+            base.system.conflict += ((eff.system.conflict ?? 0) * c) / denom;
+          });
+          // Chuẩn hóa về số nguyên để khớp hệ chỉ số hiện tại
+          base.growth = roundInt(base.growth);
+          base.equity = roundInt(base.equity);
+          base.stability = roundInt(base.stability);
+          base.system.rigidity = roundInt(base.system.rigidity);
+          base.system.socialTrust = roundInt(base.system.socialTrust);
+          base.system.marketHealth = roundInt(base.system.marketHealth);
+          base.system.conflict = roundInt(base.system.conflict);
+        }
+      }
+
+      // Pattern application: delta on top of base (spec “pattern_application = delta”)
+      const stateDir = dirs.state;
+      const bizDir = dirs.business;
+      const workerDir = dirs.worker;
+      const citizenDir = dirs.citizen;
+
+      const isAllC = stateDir === "C" && bizDir === "C" && workerDir === "C" && citizenDir === "C";
+      if (isAllC) {
+        base.growth += 2;
+        base.equity += 2;
+        base.stability += 2;
+        base.system.socialTrust += 3;
+        base.system.marketHealth += 2;
+        base.system.conflict += -3;
+      }
+
+      const isGrowthSkew =
+        stateDir === "A" && bizDir === "A" && citizenDir === "B" && (workerDir === "B" || workerDir === "C");
+      if (isGrowthSkew) {
+        base.growth += 1;
+        base.equity += -2;
+        base.stability += -1;
+        base.system.socialTrust += -2;
+        base.system.conflict += 2;
+      }
+
+      const isWelfareHeavy = stateDir === "B" && bizDir === "B" && workerDir === "B" && citizenDir === "B";
+      if (isWelfareHeavy) {
+        base.growth += -1;
+        base.equity += 2;
+        base.system.marketHealth += -2;
+        base.system.rigidity += 1;
+      }
+
+      const isStiffControl = stateDir === "D" && bizDir === "D" && workerDir === "D" && citizenDir === "D";
+      if (isStiffControl) {
+        base.growth += -2;
+        base.equity += -1;
+        base.stability += 1;
+        base.system.rigidity += 3;
+        base.system.socialTrust += -2;
+        base.system.marketHealth += -3;
+        base.system.conflict += 1;
+      }
+
+      // Note: penalty “bế tắc chiến lược” đã có trong case 3 nên không cộng thêm ở pattern.
+      return base;
+    },
   },
 ];
 
@@ -1427,6 +1836,8 @@ export interface GameState {
   indicators: Indicators;
   votes: Record<string, string>;
   roundHistory: RoundHistoryItem[];
+  turnIndex: number;
+  turnExpiresAt: string | null;
   countdown: number;
 }
 
@@ -1843,6 +2254,14 @@ export function matchesRoleRule(
     if (!accepted?.length) return true;
     return selections[roleId] !== null && accepted.includes(selections[roleId] as string);
   });
+}
+
+export function resolveConditionalQuestion(
+  roleConfig: RoundRoleConfig,
+  selections: Record<RoleId, string | null>
+): string {
+  const variant = roleConfig.questionVariants?.find((item) => matchesRoleRule(selections, item.when));
+  return variant?.question ?? roleConfig.question;
 }
 
 export function getHistoryEffect(historyItem: RoundHistoryItem): RoundEffect {

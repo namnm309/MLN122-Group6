@@ -213,10 +213,12 @@
   }
 
   .fullpageSnapSection {
-    height: 100dvh;
+    min-height: 100dvh;
+    height: auto;
     scroll-snap-align: start;
     scroll-snap-stop: always;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 }
 

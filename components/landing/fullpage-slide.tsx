@@ -24,6 +24,12 @@ type FullPageSlideProps = {
   actions?: SlideAction[];
   children?: ReactNode;
   className?: string;
+  childrenWrapperClassName?: string;
+  headerTight?: boolean;
+  fullHeight?: boolean;
+  childrenReveal?: boolean;
+  outerPaddingClassName?: string;
+  innerGapClassName?: string;
 };
 
 export function FullPageSlide({
@@ -37,11 +43,23 @@ export function FullPageSlide({
   actions,
   children,
   className,
+  childrenWrapperClassName,
+  headerTight = false,
+  fullHeight = true,
+  childrenReveal = true,
+  outerPaddingClassName,
+  innerGapClassName,
 }: FullPageSlideProps) {
   return (
     <section id={id} className={cn("fullpageSnapSection scroll-mt-24", className)}>
-      <div className="h-full px-4 sm:px-6 pt-[calc(5.5rem+env(safe-area-inset-top))] sm:pt-24 pb-10 flex">
-        <div className="max-w-6xl mx-auto w-full flex flex-col justify-between gap-8">
+      <div
+        className={cn(
+          fullHeight ? "h-full" : "",
+          "px-4 sm:px-6 pt-[calc(5.5rem+env(safe-area-inset-top))] sm:pt-24 pb-16 sm:pb-20 flex",
+          outerPaddingClassName
+        )}
+      >
+        <div className={cn("max-w-6xl mx-auto w-full flex flex-col justify-start gap-8", innerGapClassName)}>
           <div>
             <Reveal className="flex items-center justify-between gap-4" delayMs={10}>
               {eyebrow ? (
@@ -53,7 +71,7 @@ export function FullPageSlide({
               )}
             </Reveal>
 
-            <Reveal delayMs={40} className="mt-6 max-w-5xl">
+            <Reveal delayMs={40} className={cn("mt-6 max-w-5xl", headerTight && "mt-3")}>
               <h2 className="text-4xl sm:text-6xl font-black tracking-tight leading-[0.95] text-balance">
                 {title}
                 {accent ? <span className="block text-primary">{accent}</span> : null}
@@ -61,7 +79,10 @@ export function FullPageSlide({
             </Reveal>
 
             {lead?.trim() ? (
-              <Reveal delayMs={70} className="mt-5 max-w-3xl">
+              <Reveal
+                delayMs={70}
+                className={cn("mt-5 max-w-3xl", headerTight && "mt-3")}
+              >
                 <p className="text-base sm:text-lg leading-relaxed text-muted-foreground text-pretty">
                   {lead}
                 </p>
@@ -92,9 +113,13 @@ export function FullPageSlide({
             ) : null}
 
             {children ? (
-              <Reveal delayMs={110} className="mt-10">
-                {children}
-              </Reveal>
+              childrenReveal ? (
+                <Reveal delayMs={110} className={cn("mt-10", childrenWrapperClassName)}>
+                  {children}
+                </Reveal>
+              ) : (
+                <div className={cn("mt-10", childrenWrapperClassName)}>{children}</div>
+              )
             ) : null}
           </div>
         </div>

@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS public.game_state (
   id UUID DEFAULT GEN_RANDOM_UUID() PRIMARY KEY,
   room_id TEXT NOT NULL UNIQUE REFERENCES public.rooms(id) ON DELETE CASCADE,
   current_round INTEGER DEFAULT 0,
+  turn_index INTEGER DEFAULT 0,
+  turn_expires_at TIMESTAMPTZ,
   economic_growth INTEGER DEFAULT 50,
   social_equity INTEGER DEFAULT 50,
   market_stability INTEGER DEFAULT 50,

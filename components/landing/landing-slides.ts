@@ -87,8 +87,8 @@ export const landingSlides: LandingSlide[] = [
     lead:
       "Xem nhanh để lấy bối cảnh chung. Sau đó mỗi màn bên dưới sẽ bóc tách từng ý theo nhịp ngắn, dễ đọc và dễ nhớ hơn.",
     note: "",
-    videoSrc: "https://drive.google.com/file/d/1tIckbcONnWTjaW2KPwUeBLNG-8Jn2P-4/view?usp=sharing",
-    openHref: "https://drive.google.com/file/d/1tIckbcONnWTjaW2KPwUeBLNG-8Jn2P-4/view?usp=sharing",
+    videoSrc: "https://drive.google.com/file/d/1VQFEU-JwRoPpK9-HXOw4CcVlBN_E8Gir/view",
+    openHref: "https://drive.google.com/file/d/1VQFEU-JwRoPpK9-HXOw4CcVlBN_E8Gir/view",
     actions: [
       { label: "Tiếp tục sang lý thuyết", href: "#tomtat", variant: "primary" },
       { label: "Vào chơi ngay", href: "/game", variant: "secondary" },

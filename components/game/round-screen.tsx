@@ -1,7 +1,7 @@
 "use client";
 
 import { useGame, ROUND_DURATION_SECONDS } from "@/lib/game-context";
-import { GAME_ROUNDS, ROLES, RoleId, type RoleChoiceOption } from "@/lib/game-data";
+import { GAME_ROUNDS, ROLES, RoleId, type RoleChoiceOption, resolveConditionalQuestion } from "@/lib/game-data";
 import { IndicatorBar } from "./indicator-bar";
 import { RoleBadge } from "./role-badge";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,7 @@ function OptionTradeoffPreview({ option, roleId }: { option: RoleChoiceOption; r
 function HostRoundDashboard() {
   const { state, endRoundNow, dbReady } = useGame();
   const round = GAME_ROUNDS[state.currentRound - 1];
+  const activeRole = round?.turnOrder?.[state.turnIndex] ?? null;
   const votedCount = Object.keys(state.votes).length;
   const totalCount = state.players.length;
   const pctCountdown = (state.countdown / ROUND_DURATION_SECONDS) * 100;
@@ -171,7 +172,10 @@ function HostRoundDashboard() {
             return (
               <div
                 key={roleId}
-                className="rounded-2xl border bg-card p-4 space-y-4"
+                className={cn(
+                  "rounded-2xl border bg-card p-4 space-y-4",
+                  activeRole && roleId !== activeRole ? "opacity-70" : ""
+                )}
                 style={{ borderColor: `${roleInfo?.color}40` }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -180,6 +184,9 @@ function HostRoundDashboard() {
                       <span className="text-lg" aria-hidden="true">{roleInfo?.icon}</span>
                       <div className={cn("text-sm font-bold", roleInfo?.textClass)}>{roleInfo?.label}</div>
                     </div>
+                    {activeRole && roleId !== activeRole && (
+                      <p className="mt-2 text-[11px] text-muted-foreground">Chờ lượt của {ROLES.find((r) => r.id === activeRole)?.label ?? activeRole}</p>
+                    )}
                     <p className="mt-2 text-sm leading-relaxed text-foreground">
                       {round.roles[roleId].question}
                     </p>
@@ -275,6 +282,46 @@ function GuestRoundScreen() {
   const roleId = currentPlayer?.role ?? null;
   const roleInfo = roleId ? ROLES.find((role) => role.id === roleId) : null;
   const roleRound = roleId ? round.roles[roleId] : null;
+  const activeRole = round.turnOrder[state.turnIndex] ?? null;
+  const isMyTurn = roleId !== null && activeRole !== null && roleId === activeRole;
+
+  const computeRoleChoices = (): Record<RoleId, string | null> => {
+    const selections: Record<RoleId, string | null> = { state: null, business: null, worker: null, citizen: null };
+    const counts: Record<RoleId, Record<string, number>> = { state: {}, business: {}, worker: {}, citizen: {} };
+
+    (Object.keys(counts) as RoleId[]).forEach((rid) => {
+      round.roles[rid].options.forEach((o) => {
+        counts[rid][o.id] = 0;
+      });
+    });
+
+    state.players.forEach((p) => {
+      if (!p.role) return;
+      const voteIndex = state.votes[p.id];
+      if (voteIndex === undefined) return;
+      const opt = round.roles[p.role].options[Number(voteIndex)];
+      if (!opt) return;
+      counts[p.role][opt.id] = (counts[p.role][opt.id] ?? 0) + 1;
+    });
+
+    (Object.keys(counts) as RoleId[]).forEach((rid) => {
+      let bestChoice: string | null = null;
+      let bestCount = -1;
+      Object.entries(counts[rid]).forEach(([oid, c]) => {
+        if (c > bestCount) {
+          bestChoice = oid;
+          bestCount = c;
+        }
+      });
+      selections[rid] = bestCount > 0 ? bestChoice : null;
+    });
+
+    return selections;
+  };
+
+  const selections = isMyTurn ? computeRoleChoices() : null;
+  const conditionalQuestion =
+    isMyTurn && activeRole ? resolveConditionalQuestion(round.roles[activeRole], selections as any) : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -323,6 +370,7 @@ function GuestRoundScreen() {
               style={{
                 borderColor: `${roleInfo.color}55`,
                 background: `${roleInfo.color}10`,
+                opacity: isMyTurn ? 1 : 0.6,
               }}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -341,10 +389,19 @@ function GuestRoundScreen() {
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 Chọn đáp án sẽ tạo điểm cộng hoặc trừ cho vai của bạn. Sau 5 vòng, bàn tính điểm cuối = `rolePoints` + Utility theo trạng thái hệ thống - Phạt cực đoan. Vai có điểm cuối cao nhất thắng.
               </p>
+              {!isMyTurn && activeRole && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Chờ lượt của{" "}
+                  <span className="font-semibold text-foreground">
+                    {ROLES.find((r) => r.id === activeRole)?.label ?? activeRole}
+                  </span>
+                  ...
+                </p>
+              )}
             </div>
 
             <div>
-              <h3 className="font-bold text-base mb-3">{roleRound.question}</h3>
+              <h3 className="font-bold text-base mb-3">{conditionalQuestion ?? roleRound.question}</h3>
               <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                 Hãy vote như {roleInfo.label.toLowerCase()}, không vote như người đứng ngoài muốn tất cả cùng đẹp.
               </p>
@@ -354,8 +411,8 @@ function GuestRoundScreen() {
                   return (
                     <button
                       key={`${roleId}-${option.id}`}
-                      onClick={() => !myVote && submitVote(index)}
-                      disabled={!!myVote}
+                      onClick={() => isMyTurn && !myVote && submitVote(index)}
+                      disabled={!isMyTurn || !!myVote}
                       className={cn(
                         "w-full text-left p-4 rounded-2xl border-2 transition-all duration-200",
                         "flex items-start gap-3",
@@ -363,7 +420,7 @@ function GuestRoundScreen() {
                           ? "border-primary bg-primary/10 scale-[1.01]"
                           : myVote
                           ? "border-border bg-card opacity-60 cursor-not-allowed"
-                          : "border-border bg-card hover:border-primary/60 hover:bg-primary/5 active:scale-[0.99]"
+                            : "border-border bg-card hover:border-primary/60 hover:bg-primary/5 active:scale-[0.99]"
                       )}
                       aria-pressed={isMyVote}
                     >
@@ -382,7 +439,7 @@ function GuestRoundScreen() {
                         <div className="text-sm leading-relaxed text-muted-foreground mt-1">
                           {option.text}
                         </div>
-                        <OptionTradeoffPreview option={option} roleId={roleId} />
+                        <OptionTradeoffPreview option={option} roleId={roleId as RoleId} />
                       </div>
                       {isMyVote && (
                         <span className="ml-auto text-primary text-lg shrink-0" aria-hidden="true">✓</span>
