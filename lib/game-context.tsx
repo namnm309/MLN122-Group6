@@ -65,6 +65,72 @@ const defaultState: GameState = {
 };
 
 const ROLE_IDS: RoleId[] = ["state", "business", "worker", "citizen"];
+const GAME_SESSION_STORAGE_KEY = "mln122:game-session";
+
+interface StoredGameSession {
+  roomCode: string;
+  playerDbId: string | null;
+  playerName: string | null;
+  isHost: boolean;
+  hostName: string;
+}
+
+interface RoomRow {
+  id: string;
+  name: string;
+  created_by: string;
+  status: string;
+  current_round: number | null;
+}
+
+interface GameStateRow {
+  current_round: number | null;
+  turn_index: number | null;
+  turn_expires_at: string | null;
+  economic_growth: number | null;
+  social_equity: number | null;
+  market_stability: number | null;
+  round_history: any[] | null;
+}
+
+function readSession(): StoredGameSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(GAME_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredGameSession;
+    if (!parsed?.roomCode) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(session: StoredGameSession) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(GAME_SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(GAME_SESSION_STORAGE_KEY);
+}
+
+function mapPlayers(playersData: any[] | null): Player[] {
+  return (playersData || []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    role: p.role as RoleId | null,
+    vote: null,
+  }));
+}
+
+function derivePhase(roomStatus: string | null | undefined, roomRound: number): GameState["phase"] {
+  if (roomRound > GAME_ROUNDS.length) return "final";
+  if (roomStatus === "round_result") return "round_result";
+  if (roomStatus === "playing" && roomRound > 0) return "round";
+  return "waiting";
+}
 
 function resolveRoleChoice(
   round: GameRound,
@@ -101,6 +167,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const currentRoundRef = useRef<number>(0);
   const turnIndexRef = useRef<number>(0);
   const hostAdvancingRef = useRef<boolean>(false);
+  const restoringRef = useRef<boolean>(false);
 
   const stopCountdown = useCallback(() => {
     if (countdownRef.current) {
@@ -266,6 +333,100 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [state.roomCode, state.currentRound, dbReady]);
 
+  const hydrateFromSnapshot = useCallback(
+    async (session: StoredGameSession): Promise<boolean> => {
+      const roomCode = session.roomCode.toUpperCase();
+      try {
+        const [{ data: roomData, error: roomError }, { data: playersData }, { data: gsData }] = await Promise.all([
+          supabase.from("rooms").select("id,name,created_by,status,current_round").eq("id", roomCode).single(),
+          supabase.from("players").select("*").eq("room_id", roomCode).order("joined_at", { ascending: true }),
+          supabase
+            .from("game_state")
+            .select("current_round,turn_index,turn_expires_at,economic_growth,social_equity,market_stability,round_history")
+            .eq("room_id", roomCode)
+            .single(),
+        ]);
+
+        if (roomError || !roomData) {
+          clearSession();
+          return false;
+        }
+
+        if (!session.isHost) {
+          if (!session.playerDbId) {
+            clearSession();
+            return false;
+          }
+          const stillExists = (playersData || []).some((p: any) => p.id === session.playerDbId);
+          if (!stillExists) {
+            clearSession();
+            return false;
+          }
+        }
+
+        const room = roomData as RoomRow;
+        const gameState = gsData as GameStateRow | null;
+        const roomRound = room.current_round ?? 0;
+        const computedRound = Math.max(roomRound, gameState?.current_round ?? 0);
+        const phase = derivePhase(room.status, computedRound);
+        const players = mapPlayers(playersData || []);
+        const turnExpiresAt = gameState?.turn_expires_at ?? null;
+        const { data: voteData } =
+          computedRound > 0
+            ? await supabase.from("votes").select("player_id,option_index").eq("room_id", roomCode).eq("round_number", computedRound)
+            : { data: null };
+        const restoredVotes: Record<string, string> = {};
+        (voteData || []).forEach((v: any) => {
+          restoredVotes[v.player_id] = String(v.option_index);
+        });
+        const countdown = turnExpiresAt
+          ? Math.max(0, Math.ceil((new Date(turnExpiresAt).getTime() - Date.now()) / 1000))
+          : ROUND_DURATION_SECONDS;
+
+        setState({
+          ...defaultState,
+          roomCode,
+          roomName: room.name || roomCode,
+          hostName: room.created_by,
+          players,
+          phase,
+          currentRound: computedRound,
+          turnIndex: gameState?.turn_index ?? 0,
+          turnExpiresAt,
+          indicators: {
+            growth: (gameState?.economic_growth ?? 50) / 10,
+            equity: (gameState?.social_equity ?? 50) / 10,
+            stability: (gameState?.market_stability ?? 50) / 10,
+          },
+          votes: restoredVotes,
+          roundHistory: (gameState?.round_history ?? []) as any,
+          countdown,
+        });
+
+        setCurrentPlayerId(session.isHost ? `host-${roomCode}` : session.playerDbId);
+        setCurrentPlayerDbId(session.isHost ? null : session.playerDbId);
+        setIsHost(session.isHost);
+        return true;
+      } catch (error) {
+        console.error("[v0] Error restoring session:", error);
+        clearSession();
+        return false;
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!dbReady || restoringRef.current) return;
+    const session = readSession();
+    if (!session) return;
+
+    restoringRef.current = true;
+    hydrateFromSnapshot(session).finally(() => {
+      restoringRef.current = false;
+    });
+  }, [dbReady, hydrateFromSnapshot]);
+
   const createRoom = useCallback(async (hostName: string, roomName: string) => {
     const roomCode = generateRoomCode();
     const displayName = roomName.trim() || "Game Room";
@@ -306,6 +467,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setCurrentPlayerId(`host-${roomCode}`);
       setCurrentPlayerDbId(null);
       setIsHost(true);
+      saveSession({
+        roomCode,
+        playerDbId: null,
+        playerName: hostName,
+        isHost: true,
+        hostName,
+      });
     } catch (error: any) {
       console.error("[v0] Error creating room:", error);
     }
@@ -375,6 +543,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setCurrentPlayerId(playerData.id);
         setCurrentPlayerDbId(playerData.id);
         setIsHost(false);
+        saveSession({
+          roomCode: upperRoomCode,
+          playerDbId: playerData.id,
+          playerName: playerName.trim(),
+          isHost: false,
+          hostName: roomData.created_by,
+        });
 
         console.log("[v0] Joined room successfully");
         return { success: true };
@@ -777,6 +952,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setCurrentPlayerId(null);
     setCurrentPlayerDbId(null);
     setIsHost(false);
+    clearSession();
     stopCountdown();
   }, [stopCountdown]);
 
