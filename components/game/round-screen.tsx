@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useGame, ROUND_DURATION_SECONDS } from "@/lib/game-context";
 import { GAME_ROUNDS, ROLES, RoleId, type RoleChoiceOption, resolveConditionalQuestion } from "@/lib/game-data";
 import { IndicatorBar } from "./indicator-bar";
 import { RoleBadge } from "./role-badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 const ROLE_IDS: RoleId[] = ["state", "business", "worker", "citizen"];
 const MACRO_LABELS = {
@@ -284,6 +286,19 @@ function GuestRoundScreen() {
   const roleRound = roleId ? round.roles[roleId] : null;
   const activeRole = round.turnOrder[state.turnIndex] ?? null;
   const isMyTurn = roleId !== null && activeRole !== null && roleId === activeRole;
+
+  const lastToastTurnKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isMyTurn) return;
+    const turnKey = `${state.currentRound}-${state.turnIndex}`;
+    if (lastToastTurnKeyRef.current === turnKey) return;
+
+    lastToastTurnKeyRef.current = turnKey;
+    toast({
+      title: "Tới lượt của bạn",
+      description: `Bạn có ${ROUND_DURATION_SECONDS} giây để chốt phương án.`,
+    });
+  }, [isMyTurn, state.currentRound, state.turnIndex]);
 
   const computeRoleChoices = (): Record<RoleId, string | null> => {
     const selections: Record<RoleId, string | null> = { state: null, business: null, worker: null, citizen: null };

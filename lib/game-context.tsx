@@ -47,7 +47,7 @@ interface GameContextValue {
 
 const defaultIndicators: Indicators = { growth: 5, equity: 5, stability: 5 };
 
-export const ROUND_DURATION_SECONDS = 90;
+export const ROUND_DURATION_SECONDS = 30;
 
 const defaultState: GameState = {
   roomCode: "",

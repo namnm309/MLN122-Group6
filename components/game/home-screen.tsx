@@ -242,7 +242,7 @@ export function HomeScreen() {
               },
               {
                 step: "04",
-                title: "Tới lượt vai nào, người của vai đó có tối đa 90 giây để chốt",
+                title: "Tới lượt vai nào, người của vai đó có tối đa 30 giây để chốt",
                 desc: "Khi tới lượt vai của bạn, bạn chọn 1 phương án A/B/C/D. Nếu trong cùng một vai có nhiều người chơi, lựa chọn của vai đó sẽ được chốt theo đa số phiếu. Hết giờ hoặc vote đủ, game tự chuyển sang vai tiếp theo.",
               },
               {
@@ -272,7 +272,7 @@ export function HomeScreen() {
             <h3 className="font-bold text-sm mb-2">Hiểu nhanh trong 30 giây</h3>
             <div className="space-y-1.5 text-sm text-muted-foreground leading-relaxed">
               <div>• Game có 5 vòng, vai được random khi host bấm bắt đầu.</div>
-              <div>• Mỗi vòng đi theo lượt từng vai. Tới lượt vai nào thì vai đó chốt A/B/C/D trong tối đa 90 giây.</div>
+              <div>• Mỗi vòng đi theo lượt từng vai. Tới lượt vai nào thì vai đó chốt A/B/C/D trong tối đa 30 giây.</div>
               <div>• Nếu một vai có nhiều người, game lấy phương án được nhiều phiếu nhất của vai đó.</div>
               <div>• Mục tiêu của bạn là bảo vệ lợi ích của vai mình, không phải chọn đáp án “đẹp” cho tất cả.</div>
             </div>

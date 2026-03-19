@@ -7,6 +7,7 @@ import { RoundScreen } from "./round-screen";
 import { RoundResult } from "./round-result";
 import { FinalScreen } from "./final-screen";
 import { BackgroundMusic } from "./background-music";
+import { Toaster } from "@/components/ui/toaster";
 
 export function GameOrchestrator() {
   const { state } = useGame();
@@ -31,6 +32,7 @@ export function GameOrchestrator() {
   return (
     <>
       <BackgroundMusic audioSrc="/gamebackground.mp3" shouldPlay={true} />
+      <Toaster />
       {content}
     </>
   );
