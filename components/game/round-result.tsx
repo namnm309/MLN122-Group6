@@ -29,6 +29,9 @@ export function RoundResult() {
     roleId: rid,
     score: finalEffect.rolePoints[rid] ?? 0,
   }));
+  const deviationFlags = history.deviationFlags ?? { state: false, business: false, worker: false, citizen: false };
+  const deviationPenaltyApplied = history.deviationPenaltyApplied ?? { state: 0, business: 0, worker: 0, citizen: 0 };
+  const deviationBudgetAfter = history.deviationBudgetAfter ?? { state: 0, business: 0, worker: 0, citizen: 0 };
   const maxScore = Math.max(...roleScoresThisRound.map((r) => r.score), 0);
   const topRolesThisRound = roleScoresThisRound
     .filter((r) => r.score === maxScore && maxScore > 0)
@@ -181,6 +184,39 @@ export function RoundResult() {
                   <p className="text-[11px] text-muted-foreground mt-1.5">
                     Điểm chỉ tính riêng vòng này. {roleWhy}
                   </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
+            Ràng buộc vai trong vòng này
+          </h3>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {ROLES.map((role) => {
+              const rid = role.id as RoleId;
+              const wasDeviation = deviationFlags[rid];
+              const penalty = deviationPenaltyApplied[rid] ?? 0;
+              const budgetLeft = deviationBudgetAfter[rid] ?? 0;
+              return (
+                <div key={`deviation-${role.id}`} className="rounded-xl border bg-card p-3">
+                  <div className={cn("text-sm font-bold", role.textClass)}>{role.icon} {role.label}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Budget còn lại: <span className="font-semibold text-foreground">{budgetLeft}/2</span>
+                  </div>
+                  <div className="text-xs mt-1.5">
+                    {wasDeviation ? (
+                      penalty > 0 ? (
+                        <span className="text-destructive font-semibold">Vượt budget: bị phạt -{penalty} điểm vai.</span>
+                      ) : (
+                        <span className="text-amber-600 font-semibold">Đã tiêu tốn 1 budget vì chọn lệch vai.</span>
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">Giữ đúng mục tiêu vai, không tiêu budget.</span>
+                    )}
+                  </div>
                 </div>
               );
             })}

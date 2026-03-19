@@ -18,8 +18,13 @@ import {
   GAME_ROUNDS,
   ROLES,
   applyPartialRoundEffect,
+  createEmptyRoleFlagMap,
+  createEmptyRoleCountMap,
   createEmptyRoundEffect,
+  createInitialRoleDeviationBudget,
   generateRoomCode,
+  getOverBudgetPenalty,
+  isRoleChoiceDeviation,
   materializeOptionEffect,
   matchesRoleRule,
   resolveRoleOption,
@@ -62,9 +67,36 @@ const defaultState: GameState = {
   votes: {},
   roundHistory: [],
   countdown: ROUND_DURATION_SECONDS,
+  roleDeviationBudget: createInitialRoleDeviationBudget(),
+  roleDeviationUsed: createEmptyRoleCountMap(),
+  roleDeviationPenaltyCount: createEmptyRoleCountMap(),
 };
 
 const ROLE_IDS: RoleId[] = ["state", "business", "worker", "citizen"];
+
+function deriveDeviationStateFromHistory(roundHistory: GameState["roundHistory"]) {
+  const budget = createInitialRoleDeviationBudget();
+  const used = createEmptyRoleCountMap();
+  const penaltyCount = createEmptyRoleCountMap();
+
+  roundHistory.forEach((item) => {
+    const after = item.deviationBudgetAfter;
+    const before = item.deviationBudgetBefore;
+    const flags = item.deviationFlags;
+    const penalties = item.deviationPenaltyApplied;
+    ROLE_IDS.forEach((roleId) => {
+      if (flags?.[roleId]) used[roleId] += 1;
+      if ((penalties?.[roleId] ?? 0) > 0) penaltyCount[roleId] += 1;
+      if (typeof after?.[roleId] === "number") {
+        budget[roleId] = after[roleId];
+      } else if (typeof before?.[roleId] === "number") {
+        budget[roleId] = before[roleId];
+      }
+    });
+  });
+
+  return { budget, used, penaltyCount };
+}
 const GAME_SESSION_STORAGE_KEY = "mln122:game-session";
 
 interface StoredGameSession {
@@ -313,6 +345,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         async (payload) => {
           const gs = payload.new as any;
           if (!gs) return;
+          const deviationState = deriveDeviationStateFromHistory(gs.round_history || []);
           setState((prev) => ({
             ...prev,
             indicators: {
@@ -321,6 +354,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               stability: gs.market_stability / 10,
             },
             roundHistory: gs.round_history || [],
+            roleDeviationBudget: deviationState.budget,
+            roleDeviationUsed: deviationState.used,
+            roleDeviationPenaltyCount: deviationState.penaltyCount,
             turnIndex: gs.turn_index ?? prev.turnIndex,
             turnExpiresAt: gs.turn_expires_at ?? prev.turnExpiresAt,
           }));
@@ -651,6 +687,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         votes: {},
         roundHistory: [],
         countdown: ROUND_DURATION_SECONDS,
+        roleDeviationBudget: createInitialRoleDeviationBudget(),
+        roleDeviationUsed: createEmptyRoleCountMap(),
+        roleDeviationPenaltyCount: createEmptyRoleCountMap(),
       }));
     } catch (error) {
       console.error("[v0] Error starting game:", error);
@@ -778,7 +817,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         synergyApplied,
         conflictApplied,
         finalEffect,
+        deviationFlags: createEmptyRoleFlagMap(),
+        deviationBudgetBefore: { ...state.roleDeviationBudget },
+        deviationBudgetAfter: { ...state.roleDeviationBudget },
+        deviationPenaltyApplied: createEmptyRoleCountMap(),
+        deviationPenaltyCount: { ...state.roleDeviationPenaltyCount },
       };
+
+      ROLE_IDS.forEach((roleId) => {
+        const chosenOption = resolveRoleOption(round, roleId, roleChoices[roleId]);
+        const isDeviation = isRoleChoiceDeviation(roleId, chosenOption);
+        roundData.deviationFlags[roleId] = isDeviation;
+        if (!isDeviation) return;
+
+        const currentBudget = roundData.deviationBudgetAfter[roleId];
+        if (currentBudget > 0) {
+          roundData.deviationBudgetAfter[roleId] = currentBudget - 1;
+          roundData.deviationPenaltyApplied[roleId] = 0;
+        } else {
+          const currentPenaltyCount = roundData.deviationPenaltyCount[roleId];
+          const penalty = getOverBudgetPenalty(roleId, currentPenaltyCount);
+          roundData.deviationPenaltyCount[roleId] = currentPenaltyCount + 1;
+          roundData.deviationPenaltyApplied[roleId] = penalty;
+          finalEffect.rolePoints[roleId] -= penalty;
+          finalEffect.system.conflict += 1;
+          if (currentPenaltyCount >= 1) {
+            finalEffect.system.socialTrust -= 1;
+          }
+        }
+      });
 
       // Update game state in DB — this triggers game_state subscription for all clients
       const history = gsData?.round_history || [];
@@ -806,6 +873,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         phase: "round_result",
         indicators: newIndicators,
         roundHistory: history,
+        roleDeviationBudget: roundData.deviationBudgetAfter,
+        roleDeviationUsed: {
+          state: prev.roleDeviationUsed.state + (roundData.deviationFlags.state ? 1 : 0),
+          business: prev.roleDeviationUsed.business + (roundData.deviationFlags.business ? 1 : 0),
+          worker: prev.roleDeviationUsed.worker + (roundData.deviationFlags.worker ? 1 : 0),
+          citizen: prev.roleDeviationUsed.citizen + (roundData.deviationFlags.citizen ? 1 : 0),
+        },
+        roleDeviationPenaltyCount: roundData.deviationPenaltyCount,
       }));
     } catch (error) {
       console.error("[v0] Error resolving votes:", error);

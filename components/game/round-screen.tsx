@@ -2,7 +2,16 @@
 
 import { useEffect, useRef } from "react";
 import { useGame, ROUND_DURATION_SECONDS } from "@/lib/game-context";
-import { GAME_ROUNDS, ROLES, RoleId, type RoleChoiceOption, resolveConditionalQuestion } from "@/lib/game-data";
+import {
+  GAME_ROUNDS,
+  ROLES,
+  RoleId,
+  ROLE_HINT_TEXT,
+  getOverBudgetPenalty,
+  isRoleChoiceDeviation,
+  type RoleChoiceOption,
+  resolveConditionalQuestion,
+} from "@/lib/game-data";
 import { IndicatorBar } from "./indicator-bar";
 import { RoleBadge } from "./role-badge";
 import { cn } from "@/lib/utils";
@@ -337,6 +346,8 @@ function GuestRoundScreen() {
   const selections = isMyTurn ? computeRoleChoices() : null;
   const conditionalQuestion =
     isMyTurn && activeRole ? resolveConditionalQuestion(round.roles[activeRole], selections as any) : null;
+  const myRoleBudget = roleId ? state.roleDeviationBudget[roleId] : 0;
+  const myRolePenaltyCount = roleId ? state.roleDeviationPenaltyCount[roleId] : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -404,6 +415,27 @@ function GuestRoundScreen() {
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 Chọn đáp án sẽ tạo điểm cộng hoặc trừ cho vai của bạn. Sau 5 vòng, bàn tính điểm cuối = `rolePoints` + Utility theo trạng thái hệ thống - Phạt cực đoan. Vai có điểm cuối cao nhất thắng.
               </p>
+              {roleId && (
+                <div
+                  className={cn(
+                    "mt-3 rounded-xl border px-3 py-2 text-xs leading-relaxed",
+                    myRoleBudget > 0
+                      ? "border-primary/30 bg-primary/10 text-muted-foreground"
+                      : "border-destructive/40 bg-destructive/10 text-destructive"
+                  )}
+                >
+                  <p className="font-semibold text-foreground mb-1">Hint theo vai</p>
+                  <p>{ROLE_HINT_TEXT[roleId]}</p>
+                  <p className="mt-1.5">
+                    Budget lệch vai còn: <span className="font-bold">{myRoleBudget}/2</span>
+                  </p>
+                  {myRoleBudget <= 0 && (
+                    <p className="mt-1">
+                      Bạn đã hết budget. Nếu tiếp tục chọn phương án lệch vai, sẽ bị trừ điểm vai và tăng xung đột hệ thống.
+                    </p>
+                  )}
+                </div>
+              )}
               {!isMyTurn && activeRole && (
                 <p className="text-xs text-muted-foreground mt-3">
                   Chờ lượt của{" "}
@@ -423,6 +455,11 @@ function GuestRoundScreen() {
               <div className="space-y-3">
                 {roleRound.options.map((option, index) => {
                   const isMyVote = myVote === String(index);
+                  const isDeviation = roleId ? isRoleChoiceDeviation(roleId, option) : false;
+                  const overBudgetPenalty =
+                    roleId && isDeviation && myRoleBudget <= 0
+                      ? getOverBudgetPenalty(roleId, myRolePenaltyCount)
+                      : 0;
                   return (
                     <button
                       key={`${roleId}-${option.id}`}
@@ -454,6 +491,20 @@ function GuestRoundScreen() {
                         <div className="text-sm leading-relaxed text-muted-foreground mt-1">
                           {option.text}
                         </div>
+                        {isDeviation && (
+                          <div
+                            className={cn(
+                              "mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                              myRoleBudget > 0
+                                ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                                : "border-destructive/40 bg-destructive/10 text-destructive"
+                            )}
+                          >
+                            {myRoleBudget > 0
+                              ? "Lệch vai: sẽ tiêu tốn 1 budget"
+                              : `Lệch vai khi hết budget: phạt -${overBudgetPenalty} điểm vai`}
+                          </div>
+                        )}
                         <OptionTradeoffPreview option={option} roleId={roleId as RoleId} />
                       </div>
                       {isMyVote && (

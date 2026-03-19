@@ -150,6 +150,16 @@ export function FinalScreen() {
 
   const minFinalScore = Math.min(...leaderboard.map((l) => l.score));
   const maxFinalScore = Math.max(...leaderboard.map((l) => l.score));
+  const deviationSummary = ROLES.map((role) => {
+    const roleId = role.id as RoleId;
+    const used = state.roleDeviationUsed[roleId] ?? 0;
+    const overBudgetCount = state.roleDeviationPenaltyCount[roleId] ?? 0;
+    const totalPenalty = state.roundHistory.reduce(
+      (acc, hist) => acc + (hist.deviationPenaltyApplied?.[roleId] ?? 0),
+      0
+    );
+    return { role, used, overBudgetCount, totalPenalty };
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -278,6 +288,34 @@ export function FinalScreen() {
           <p className="text-xs text-muted-foreground mt-2 text-center">
             Điểm cuối = Điểm vai (tổng `rolePoints`) + Utility theo trạng thái hệ thống cuối game - Phạt cực đoan.
           </p>
+        </div>
+
+        <div>
+          <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
+            Kỷ luật vai và chi phí lệch vai
+          </h2>
+          <div className="space-y-2">
+            {deviationSummary.map(({ role, used, overBudgetCount, totalPenalty }) => (
+              <div key={`deviation-final-${role.id}`} className="p-3 rounded-xl border bg-card border-border">
+                <div className="flex items-center justify-between gap-3">
+                  <div className={cn("text-sm font-bold", role.textClass)}>
+                    {role.icon} {role.label}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Lệch vai: <span className="font-semibold text-foreground">{used}</span> lần
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1.5">
+                  Vượt budget: <span className="font-semibold text-foreground">{overBudgetCount}</span> lần
+                  {totalPenalty > 0 ? (
+                    <span className="ml-2 text-destructive font-semibold">(-{totalPenalty} điểm vai)</span>
+                  ) : (
+                    <span className="ml-2">không bị phạt vượt budget</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Final indicators */}

@@ -249,6 +249,31 @@ export interface RoleChoiceOption {
   system: Partial<SystemEffect>;
 }
 
+export interface RoleDeviationRuleConfig {
+  budget: number;
+  penaltyBase: number;
+  penaltyStep: number;
+  penaltyMax: number;
+}
+
+export const ROLE_DEVIATION_CONFIG: Record<RoleId, RoleDeviationRuleConfig> = {
+  state: { budget: 2, penaltyBase: 2, penaltyStep: 1, penaltyMax: 4 },
+  business: { budget: 2, penaltyBase: 2, penaltyStep: 1, penaltyMax: 4 },
+  worker: { budget: 2, penaltyBase: 2, penaltyStep: 1, penaltyMax: 4 },
+  citizen: { budget: 2, penaltyBase: 2, penaltyStep: 1, penaltyMax: 4 },
+};
+
+export const ROLE_HINT_TEXT: Record<RoleId, string> = {
+  state:
+    "Ưu tiên của bạn là giữ ổn định hệ thống và niềm tin xã hội. Nhượng bộ quá mức ở ngắn hạn có thể làm hệ thống méo dài hạn.",
+  business:
+    "Bạn phải bảo toàn tăng trưởng và sức khỏe thị trường. Không thể liên tục chọn phương án hy sinh năng lực phát triển của doanh nghiệp.",
+  worker:
+    "Mục tiêu là bảo vệ thu nhập, việc làm và vị thế thương lượng. Nhẫn nhịn quá mức hoặc đối đầu cực đoan đều có chi phí dài hạn.",
+  citizen:
+    "Bạn bảo vệ sức mua, chất lượng sống và tính minh bạch. Chọn lợi ngắn hạn bằng mọi giá có thể làm trust xã hội giảm mạnh.",
+};
+
 export interface QuestionVariant {
   id: string;
   when: Partial<Record<RoleId, string[]>>;
@@ -1824,6 +1849,11 @@ export interface RoundHistoryItem {
   synergyApplied?: AppliedRoundRule[];
   conflictApplied?: AppliedRoundRule[];
   finalEffect?: RoundEffect;
+  deviationFlags?: Record<RoleId, boolean>;
+  deviationBudgetBefore?: Record<RoleId, number>;
+  deviationBudgetAfter?: Record<RoleId, number>;
+  deviationPenaltyApplied?: Record<RoleId, number>;
+  deviationPenaltyCount?: Record<RoleId, number>;
 }
 
 export interface GameState {
@@ -1839,6 +1869,9 @@ export interface GameState {
   turnIndex: number;
   turnExpiresAt: string | null;
   countdown: number;
+  roleDeviationBudget: Record<RoleId, number>;
+  roleDeviationUsed: Record<RoleId, number>;
+  roleDeviationPenaltyCount: Record<RoleId, number>;
 }
 
 export interface SystemScores {
@@ -1912,7 +1945,7 @@ export const GLOBAL_ENDINGS: GlobalEnding[] = [
     description: "Mâu thuẫn lợi ích tích tụ, chi phí phối hợp xã hội và độ mệt mỏi của mọi bên đều tăng.",
     quote: "Drama hôm nay thường là hoá đơn của những lần né quyết định trước đó.",
     vibe: "GIF: phòng họp tranh luận căng thẳng",
-    condition: (c) => c.system.conflict >= 4 && c.indicators.equity <= 6,
+    condition: (c) => c.system.conflict >= 3 && c.indicators.equity <= 7,
     color: "#d35454",
     icon: "🔥",
   },
@@ -2191,6 +2224,23 @@ export function createEmptySystemEffect(): SystemEffect {
   return { rigidity: 0, socialTrust: 0, marketHealth: 0, conflict: 0 };
 }
 
+export function createInitialRoleDeviationBudget(): Record<RoleId, number> {
+  return {
+    state: ROLE_DEVIATION_CONFIG.state.budget,
+    business: ROLE_DEVIATION_CONFIG.business.budget,
+    worker: ROLE_DEVIATION_CONFIG.worker.budget,
+    citizen: ROLE_DEVIATION_CONFIG.citizen.budget,
+  };
+}
+
+export function createEmptyRoleCountMap(): Record<RoleId, number> {
+  return { state: 0, business: 0, worker: 0, citizen: 0 };
+}
+
+export function createEmptyRoleFlagMap(): Record<RoleId, boolean> {
+  return { state: false, business: false, worker: false, citizen: false };
+}
+
 export function createEmptyRoundEffect(): RoundEffect {
   return {
     growth: 0,
@@ -2234,6 +2284,31 @@ export function materializeOptionEffect(option: RoleChoiceOption): RoundEffect {
     rolePoints: option.rolePoints,
     system: option.system,
   });
+}
+
+export function isRoleChoiceDeviation(roleId: RoleId, option: RoleChoiceOption | null): boolean {
+  if (!option) return false;
+  switch (roleId) {
+    case "business":
+      return (
+        (option.rolePoints.business ?? 0) <= 0 ||
+        (option.macro.growth ?? 0) < 0 ||
+        (option.system.marketHealth ?? 0) < 0
+      );
+    case "state":
+      return (option.macro.stability ?? 0) < 0 && (option.system.socialTrust ?? 0) < 0;
+    case "worker":
+      return (option.macro.equity ?? 0) < 0 && (option.rolePoints.worker ?? 0) <= 0;
+    case "citizen":
+      return (option.macro.equity ?? 0) < 0 || (option.system.socialTrust ?? 0) < 0;
+    default:
+      return false;
+  }
+}
+
+export function getOverBudgetPenalty(roleId: RoleId, penaltyCount: number): number {
+  const config = ROLE_DEVIATION_CONFIG[roleId];
+  return Math.min(config.penaltyMax, config.penaltyBase + penaltyCount * config.penaltyStep);
 }
 
 export function resolveRoleOption(
