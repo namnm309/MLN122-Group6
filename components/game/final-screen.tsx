@@ -71,13 +71,16 @@ export function FinalScreen() {
           className="text-xs font-medium uppercase tracking-widest mb-2"
           style={{ color: ending.color }}
         >
-          Kết thúc game
+          Màn chốt đơn cuối game
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-balance mb-2 leading-tight">
           {ending.title}
         </h1>
         <p className="text-muted-foreground text-sm text-pretty max-w-sm mx-auto">
           {ending.description}
+        </p>
+        <p className="text-xs text-muted-foreground max-w-md mx-auto mt-3 leading-relaxed">
+          Đây không phải màn chấm đúng sai. Đây là ảnh chụp cuối cùng của cả bàn sau khi 4 vai kéo hệ thống về những hướng rất khác nhau.
         </p>
       </div>
 
@@ -90,7 +93,7 @@ export function FinalScreen() {
             {isTie ? "🤝" : "🏆"}
           </div>
           <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-            {isTie ? "Đồng chiến thắng" : "Vai chiến thắng"}
+            {isTie ? "Đồng lên top" : "Vai hưởng lợi nhất"}
           </div>
           <div className="flex flex-wrap justify-center gap-2 mt-2">
             {winners.map(({ role }) => (
@@ -104,8 +107,8 @@ export function FinalScreen() {
           </div>
           <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
             {isTie
-              ? "Các vai đã cùng nhau đạt điểm cao nhất — thể hiện sự cân bằng lợi ích lý tưởng!"
-              : `Vai ${winners[0].role.label} đã thu được nhiều lợi ích nhất qua các quyết định của nhóm.`}
+              ? "Các vai đã cùng nhau lên đỉnh điểm số — bàn chơi khá cân bằng, không ai bị bỏ lại quá xa."
+              : `Vai ${winners[0].role.label} là bên \"win\" nhiều nhất qua chuỗi quyết định của nhóm. Nhưng win cho một vai chưa chắc đồng nghĩa hệ thống cũng đang ổn.`}
           </p>
         </div>
 
@@ -176,7 +179,7 @@ export function FinalScreen() {
             })}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Điểm = tổng lợi ích của vai đó qua {GAME_ROUNDS.length} vòng quyết định
+            Điểm = tổng mức độ vai đó bảo vệ được phần lợi ích của mình qua {GAME_ROUNDS.length} vòng
           </p>
         </div>
 
@@ -216,8 +219,11 @@ export function FinalScreen() {
         {/* Round recap */}
         <div>
           <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
-            Lịch sử quyết định
+            Timeline quyết định của bàn chơi
           </h2>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Nhìn lại từng vòng để thấy rõ: có lúc bàn chơi phối hợp được, có lúc mỗi bên kéo một hướng và hệ thống phải trả giá.
+          </p>
           <div className="space-y-2">
             {state.roundHistory.map((hist) => {
               const round = GAME_ROUNDS.find((r) => r.id === hist.roundId);
@@ -295,8 +301,11 @@ export function FinalScreen() {
         {/* Role personal endings */}
         <div>
           <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
-            Kết Riêng Theo Vai
+            Kết riêng cho từng vai
           </h2>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Mỗi vai đều có ending riêng vì mỗi vai bước ra khỏi bàn chơi với một mức được lợi, bị ép hay thỏa hiệp rất khác nhau.
+          </p>
           <div className="space-y-2">
             {roleEndingCards.map(({ role, roleEnding, score }) => (
               <div key={role.id} className="p-3 rounded-xl border bg-card" style={{ borderColor: `${role.color}50` }}>
@@ -327,6 +336,9 @@ export function FinalScreen() {
           <h2 className="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">
             Chỉ Số Hệ Thống
           </h2>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Đây là phần cho thấy cái giá hoặc phần thưởng mà cả xã hội phải nhận sau khi các vai giằng co lợi ích với nhau.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {[
               { label: "Độ cứng quản trị", value: systemScores.rigidity },
@@ -380,14 +392,19 @@ export function FinalScreen() {
         {/* Learning note */}
         <div className="p-4 rounded-2xl border border-dashed border-border">
           <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-            Bài học rút ra
+            Bài học sau khi \"chốt kèo\"
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Trong nền kinh tế thị trường định hướng xã hội chủ nghĩa, cần phải{" "}
-            <strong className="text-foreground">cân bằng lợi ích</strong> giữa Nhà nước, doanh nghiệp,
-            người lao động và người dân. Điểm số từng vai phản ánh mức độ lợi ích được bảo vệ qua
-            từng quyết định — không ai thắng một mình, chỉ có{" "}
-            <strong className="text-foreground">cân bằng chung mới là chiến thắng thực sự</strong>.
+            Sau vài vòng tranh luận, dễ thấy{" "}
+            <strong className="text-foreground">mỗi vai đều có lý riêng</strong> và không có phương án nào làm
+            tất cả cùng vui 100%. Điểm số từng vai cho thấy bên nào được lợi nhiều hơn, còn ba chỉ số chung cho thấy{" "}
+            <strong className="text-foreground">hệ thống đang cân bằng hay bắt đầu lệch pha</strong>.{" "}
+            Nếu chỉ chăm chăm win cho vai mình, bàn chơi rất dễ rơi vào các ending căng thẳng;{" "}
+            còn khi chịu khó nhường nhau một chút, bạn sẽ thấy{" "}
+            <strong className="text-foreground">cân bằng chung mới là \"trận thắng\" đáng giá nhất</strong>.
+          </p>
+          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+            Nói cách khác: cùng một vấn đề, Nhà nước, Doanh nghiệp, Người lao động và Người dân không bao giờ nhìn giống hệt nhau. Chính vì vậy, xã hội bền không nhờ một bên luôn thắng, mà nhờ các bên tìm được mức phối hợp đủ chấp nhận để cùng đi tiếp.
           </p>
         </div>
       </div>

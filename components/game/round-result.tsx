@@ -78,6 +78,9 @@ export function RoundResult() {
           </div>
           <h2 className="text-xl font-extrabold leading-tight">{round.title}</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mt-2">{round.context}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed mt-3">
+            Cùng một biến cố, mỗi vai kéo theo một hướng khác nhau. Kết quả bên dưới cho thấy ai đang được lợi và hệ thống đang phải trả giá ra sao.
+          </p>
         </div>
 
         <div>
@@ -142,6 +145,9 @@ export function RoundResult() {
                   <div key={rule.id} className="rounded-xl border border-primary/30 bg-primary/5 p-3">
                     <div className="text-sm font-semibold text-primary">{rule.label}</div>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rule.text}</p>
+                    <p className="text-[11px] text-primary/90 mt-2 leading-relaxed">
+                      Vòng này mọi người đã nhường nhau vừa đủ nên hệ thống ăn được bonus thật, không chỉ đẹp trên lời nói.
+                    </p>
                     <div className="mt-2">
                       <IndicatorDelta effect={rule.effect} />
                     </div>
@@ -163,6 +169,9 @@ export function RoundResult() {
                   <div key={rule.id} className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
                     <div className="text-sm font-semibold text-destructive">{rule.label}</div>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rule.text}</p>
+                    <p className="text-[11px] text-destructive/90 mt-2 leading-relaxed">
+                      Các vai kéo mạnh về phần mình nên hệ thống dính phạt. Đây là lúc thấy rõ lợi ích riêng không tự động biến thành lợi ích chung.
+                    </p>
                     <div className="mt-2">
                       <IndicatorDelta effect={rule.effect} />
                     </div>
@@ -183,6 +192,9 @@ export function RoundResult() {
           </div>
           <p className="text-sm leading-relaxed text-foreground italic">"{round.message}"</p>
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{round.lesson}</p>
+          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+            Nói ngắn gọn: nếu mỗi bên chỉ ôm phần ngon nhất cho mình, bàn chơi sẽ rất nhanh trượt từ tranh luận sang bất ổn.
+          </p>
         </div>
 
         <div>

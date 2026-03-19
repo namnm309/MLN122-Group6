@@ -89,6 +89,9 @@ function HostRoundDashboard() {
             <div>
               <h2 className="font-extrabold text-xl text-balance mb-2 leading-tight">{round.title}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{round.context}</p>
+              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                Nhìn xem mỗi vai đang nghiêng về option nào. Đây là một bàn đàm phán lợi ích, không phải bài trắc nghiệm tìm đáp án đẹp nhất.
+              </p>
             </div>
             <div className="shrink-0 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-mono text-muted-foreground">
               {votedCount}/{totalCount} đã vote
@@ -267,12 +270,18 @@ function GuestRoundScreen() {
               </div>
               <p className="text-sm leading-relaxed text-foreground">{roleInfo.goal}</p>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                Hãy chọn phương án có lợi nhất cho vai của bạn trước, không cần cố làm đẹp tất cả mọi chỉ số.
+                Ưu tiên đúng lợi ích của vai bạn trước. Bạn không ở đây để làm giám khảo công tâm tuyệt đối, mà để xem lựa chọn của mình kéo hệ thống đi đâu.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Nếu phương án đó có lợi cho bạn nhưng làm bên khác khó chịu, đó chính là điều game muốn cả bàn nhìn thấy.
               </p>
             </div>
 
             <div>
               <h3 className="font-bold text-base mb-3">{roleRound.question}</h3>
+              <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                Hãy vote như {roleInfo.label.toLowerCase()}, không vote như người đứng ngoài muốn tất cả cùng đẹp.
+              </p>
               <div className="space-y-3">
                 {roleRound.options.map((option, index) => {
                   const isMyVote = myVote === String(index);
@@ -329,10 +338,10 @@ function GuestRoundScreen() {
           <div className="text-muted-foreground">{votedCount}/{totalCount} đã vote</div>
           {myVote ? (
             <div className="text-indicator-equity font-medium">
-              Đã chốt phương án {roleRound?.options[Number(myVote)]?.id ?? "?"} — chờ tổng hợp...
+              Đã chốt phương án {roleRound?.options[Number(myVote)]?.id ?? "?"} — chờ xem các vai khác kéo bàn chơi đi đâu...
             </div>
           ) : (
-            <div className="text-muted-foreground animate-pulse">Đang chờ bạn chốt phương án...</div>
+            <div className="text-muted-foreground animate-pulse">Đang chờ bạn chốt lợi ích của vai mình...</div>
           )}
         </div>
         <div className="max-w-2xl mx-auto flex gap-1.5 mt-2">
