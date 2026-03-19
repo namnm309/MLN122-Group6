@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { FullPageSlide } from "@/components/landing/fullpage-slide";
+import { KnowledgeQuiz } from "@/components/landing/knowledge-quiz";
 import type { LandingSlide } from "@/components/landing/landing-slides";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -165,10 +174,10 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
 
             <span
               className={cn(
-                "h-2.5 w-2.5 rounded-full border transition-all",
+                "h-3 w-3 rounded-full border-2 transition-all",
                 activeIndex === index
-                  ? "border-primary bg-primary scale-125"
-                  : "border-border bg-background/80 group-hover:border-primary/60"
+                  ? "border-primary bg-primary scale-125 shadow-sm"
+                  : "border-muted-foreground/40 bg-background/95 shadow-sm group-hover:border-primary/70"
               )}
               aria-hidden="true"
             />
@@ -236,7 +245,7 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
               >
                 <FullPageSlide {...commonProps} actions={slide.actions}>
                   <div className="mx-auto w-full max-w-6xl">
-                    <div className="overflow-hidden rounded-[2rem] border border-border bg-card/70 shadow-sm">
+                    <div className="overflow-hidden rounded-4xl border border-border bg-card/70 shadow-sm">
                       {(() => {
                         const drivePreviewUrl = toDrivePreviewUrl(slide.videoSrc);
                         return drivePreviewUrl ? (
@@ -312,6 +321,62 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
                           ))}
                         </div>
                       ) : null}
+                    </div>
+                  </div>
+                </FullPageSlide>
+              </div>
+            );
+
+          case "quiz":
+            return (
+              <div
+                key={slide.id}
+                ref={(node) => {
+                  slideRefs[index].current = node;
+                }}
+              >
+                <FullPageSlide {...commonProps}>
+                  <div className="max-w-5xl space-y-8">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="lg">Bắt đầu làm quiz</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-3xl p-0 overflow-hidden">
+                        <DialogHeader className="px-6 pt-6">
+                          <DialogTitle>Củng cố kiến thức · QUIZ</DialogTitle>
+                        </DialogHeader>
+                        <div className="px-6 pb-6">
+                          <KnowledgeQuiz className="border-0 p-0 bg-transparent max-h-[70dvh]" />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      <div className="rounded-3xl border border-border bg-card/70 p-5 lg:col-span-2">
+                        <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          Bạn sẽ ôn gì
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2 text-sm text-muted-foreground leading-relaxed">
+                          <div className="rounded-2xl border border-border bg-background/30 p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                              5.2
+                            </div>
+                            <div className="mt-1 font-semibold text-foreground">Hoàn thiện thể chế</div>
+                            <div className="mt-1">
+                              Khái niệm “luật chơi”, vì sao phải hoàn thiện và 5 mảng trọng tâm.
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-border bg-background/30 p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                              5.3
+                            </div>
+                            <div className="mt-1 font-semibold text-foreground">Quan hệ lợi ích kinh tế</div>
+                            <div className="mt-1">
+                              Mặt thống nhất–mâu thuẫn và nguyên tắc điều hòa giữa các chủ thể.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </FullPageSlide>
@@ -396,7 +461,7 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
       <footer className="fullpageSnapSection">
         <div className="h-full px-6 py-10 sm:py-12 flex">
           <div className="max-w-6xl mx-auto w-full flex items-center">
-            <Reveal className="w-full rounded-[2rem] border border-border bg-card/75 px-6 py-6 sm:px-8 sm:py-7" delayMs={50}>
+            <Reveal className="w-full rounded-4xl border border-border bg-card/75 px-6 py-6 sm:px-8 sm:py-7" delayMs={50}>
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="max-w-2xl">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">

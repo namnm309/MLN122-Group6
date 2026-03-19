@@ -35,6 +35,15 @@ export type LandingSlide =
   | {
       id: string;
       navLabel: string;
+      kind: "quiz";
+      eyebrow: string;
+      title: string;
+      lead: string;
+      actions?: LandingAction[];
+    }
+  | {
+      id: string;
+      navLabel: string;
       kind: "content";
       eyebrow: string;
       title: string;
@@ -222,6 +231,14 @@ export const landingSlides: LandingSlide[] = [
       "Quan hệ lợi ích = Cá nhân + Tập thể + Xã hội -> vừa thống nhất, vừa mâu thuẫn -> cần hài hòa, điều tiết",
     ],
     actions: [{ label: "Sang hướng dẫn chơi", href: "#howto-flow", variant: "primary" }],
+  },
+  {
+    id: "quiz",
+    navLabel: "Quiz",
+    kind: "quiz",
+    eyebrow: "",
+    title: "Củng cố kiến thức",
+    lead: "Làm nhanh 10 câu trắc nghiệm để ôn lại Chương 5. Chọn đáp án để xem đúng/sai ngay và đọc giải thích ngắn.",
   },
   {
     id: "howto-flow",

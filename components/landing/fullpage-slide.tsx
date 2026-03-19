@@ -60,11 +60,13 @@ export function FullPageSlide({
               </h2>
             </Reveal>
 
-            <Reveal delayMs={70} className="mt-5 max-w-3xl">
-              <p className="text-base sm:text-lg leading-relaxed text-muted-foreground text-pretty">
-                {lead}
-              </p>
-            </Reveal>
+            {lead?.trim() ? (
+              <Reveal delayMs={70} className="mt-5 max-w-3xl">
+                <p className="text-base sm:text-lg leading-relaxed text-muted-foreground text-pretty">
+                  {lead}
+                </p>
+              </Reveal>
+            ) : null}
 
             {actions?.length ? (
               <Reveal delayMs={90} className="mt-6 flex flex-col sm:flex-row gap-3">
