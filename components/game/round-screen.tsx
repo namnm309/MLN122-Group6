@@ -152,7 +152,7 @@ function HostRoundDashboard() {
                 Nhìn xem mỗi vai đang nghiêng về option nào. Đây là một bàn đàm phán lợi ích, không phải bài trắc nghiệm tìm đáp án đẹp nhất.
               </p>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                Mỗi đáp án đều cho vai đó một mức điểm cộng hoặc trừ. Sau 5 vòng, tổng điểm vai cao nhất sẽ là bên hưởng lợi nhất.
+                Mỗi đáp án tạo điểm cộng hoặc trừ cho vai của bạn. Sau 5 vòng, bàn tính điểm cuối = `rolePoints` + Utility theo trạng thái hệ thống - Phạt cực đoan. Vai có điểm cuối cao nhất thắng.
               </p>
             </div>
             <div className="shrink-0 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-mono text-muted-foreground">
@@ -339,7 +339,7 @@ function GuestRoundScreen() {
                 Nếu phương án đó có lợi cho bạn nhưng làm bên khác khó chịu, đó chính là điều game muốn cả bàn nhìn thấy.
               </p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Chọn đáp án sẽ tạo điểm cộng hoặc trừ cho vai của bạn. Sau 5 vòng, tổng điểm vai cao nhất sẽ là bên hưởng lợi nhất.
+                Chọn đáp án sẽ tạo điểm cộng hoặc trừ cho vai của bạn. Sau 5 vòng, bàn tính điểm cuối = `rolePoints` + Utility theo trạng thái hệ thống - Phạt cực đoan. Vai có điểm cuối cao nhất thắng.
               </p>
             </div>
 

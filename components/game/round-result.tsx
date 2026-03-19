@@ -101,7 +101,7 @@ export function RoundResult() {
           )}
           {topRolesThisRound.length > 0 && (
             <div className="pt-2 border-t border-border">
-              <div className="text-xs text-muted-foreground mb-1.5">Bên được lợi nhất vòng này:</div>
+              <div className="text-xs text-muted-foreground mb-1.5">Bên ghi nhiều Điểm vai nhất vòng này:</div>
               <div className="flex flex-wrap gap-2">
                 {topRolesThisRound.map((role) =>
                   role ? (
@@ -203,7 +203,7 @@ export function RoundResult() {
             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{indicatorDeltaText}</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{indicatorWhyText}</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Tổng điểm để win cuối game được cộng dần từ `rolePoints` của từng vòng, không lấy trực tiếp từ 3 chỉ số nền này.
+              Điểm win cuối game = tổng `rolePoints` + Utility theo trạng thái hệ thống cuối game (và trừ phạt cực đoan). 
             </p>
           </div>
         </div>

@@ -10,6 +10,8 @@ import {
   computeRoleScores,
   computeSystemScores,
   getHistoryEffect,
+  type Indicators,
+  type SystemScores,
   type RoleId,
 } from "@/lib/game-data";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,88 @@ const INDICATOR_CONFIG = [
 ];
 
 const MEDAL = ["#FFD700", "#C0C0C0", "#CD7F32", "#888"];
+const SCORE_EPS = 1e-9;
+
+function formatFinalScore(value: number) {
+  const rounded = Math.round(value * 10) / 10; // 1 chữ số thập phân
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+}
+
+function calcStateUtility(ind: Indicators, sys: SystemScores) {
+  return 2.2 * ind.stability + 1.8 * sys.socialTrust + 1.2 * ind.growth + 0.8 * ind.equity + 0.8 * sys.marketHealth - 2.0 * sys.conflict - 1.2 * sys.rigidity;
+}
+
+function calcBusinessUtility(ind: Indicators, sys: SystemScores) {
+  return 2.3 * ind.growth + 2.0 * sys.marketHealth + 1.0 * ind.stability + 0.4 * sys.socialTrust + 0.3 * ind.equity - 1.6 * sys.rigidity - 1.4 * sys.conflict;
+}
+
+function calcWorkerUtility(ind: Indicators, sys: SystemScores) {
+  return 2.3 * ind.equity + 2.0 * ind.stability + 1.3 * sys.socialTrust + 0.8 * ind.growth + 0.4 * sys.marketHealth - 1.5 * sys.conflict - 0.8 * sys.rigidity;
+}
+
+function calcCitizenUtility(ind: Indicators, sys: SystemScores) {
+  return 2.0 * ind.equity + 2.1 * sys.socialTrust + 1.5 * ind.stability + 0.7 * sys.marketHealth + 0.5 * ind.growth - 1.9 * sys.conflict - 0.9 * sys.rigidity;
+}
+
+function calcStatePenalty(ind: Indicators, sys: SystemScores) {
+  let p = 0;
+  if (ind.growth >= 8 && ind.equity <= 2) p += 3;
+  if (ind.stability >= 8 && sys.rigidity >= 7) p += 4;
+  if (sys.socialTrust <= 1 && sys.conflict >= 6) p += 5;
+  if (ind.growth <= 1 && ind.stability <= 2) p += 3;
+  return p;
+}
+
+function calcBusinessPenalty(ind: Indicators, sys: SystemScores) {
+  let p = 0;
+  if (ind.equity >= 8 && sys.marketHealth <= 2) p += 3;
+  if (sys.rigidity >= 7) p += 4;
+  if (sys.marketHealth <= 2 && sys.socialTrust <= 2) p += 4;
+  if (ind.growth <= 1) p += 3;
+  return p;
+}
+
+function calcWorkerPenalty(ind: Indicators, sys: SystemScores) {
+  let p = 0;
+  if (ind.growth >= 8 && ind.equity <= 2) p += 5;
+  if (sys.socialTrust <= 1 && sys.conflict >= 6) p += 4;
+  if (ind.equity <= 2) p += 4;
+  if (ind.stability <= 2) p += 3;
+  return p;
+}
+
+function calcCitizenPenalty(ind: Indicators, sys: SystemScores) {
+  let p = 0;
+  if (sys.socialTrust <= 1 && sys.conflict >= 6) p += 5;
+  if (ind.growth >= 8 && ind.equity <= 2) p += 4;
+  if (sys.marketHealth <= 2 && sys.socialTrust <= 2) p += 4;
+  if (ind.stability <= 2) p += 3;
+  return p;
+}
+
+function calcFinalRoleScore(roleId: RoleId, choicePoints: number, ind: Indicators, sys: SystemScores) {
+  let utility = 0;
+  let penalty = 0;
+  switch (roleId) {
+    case "state":
+      utility = calcStateUtility(ind, sys);
+      penalty = calcStatePenalty(ind, sys);
+      break;
+    case "business":
+      utility = calcBusinessUtility(ind, sys);
+      penalty = calcBusinessPenalty(ind, sys);
+      break;
+    case "worker":
+      utility = calcWorkerUtility(ind, sys);
+      penalty = calcWorkerPenalty(ind, sys);
+      break;
+    case "citizen":
+      utility = calcCitizenUtility(ind, sys);
+      penalty = calcCitizenPenalty(ind, sys);
+      break;
+  }
+  return choicePoints + utility - penalty;
+}
 
 export function FinalScreen() {
   const { state, restartGame } = useGame();
@@ -34,28 +118,38 @@ export function FinalScreen() {
   });
   const totalScore = state.indicators.growth + state.indicators.equity + state.indicators.stability;
 
-  // Build leaderboard — roles that have players get ranked, show all 4 roles
+  // Điểm cuối để xếp hạng thắng thua
   const leaderboard = ROLES.map((role) => {
+    const roleId = role.id as RoleId;
+    const choiceScore = roleScores[roleId] ?? 0;
+    const finalScore = calcFinalRoleScore(roleId, choiceScore, state.indicators, systemScores);
     const players = state.players.filter((p) => p.role === role.id);
     return {
       role,
-      score: roleScores[role.id as RoleId] ?? 0,
+      choiceScore,
+      score: finalScore,
       players,
     };
   }).sort((a, b) => b.score - a.score);
 
   const topScore = leaderboard[0].score;
-  const winners = leaderboard.filter((r) => r.score === topScore);
+  const winners = leaderboard.filter((r) => Math.abs(r.score - topScore) <= SCORE_EPS);
   const isTie = winners.length > 1;
 
-  const roleEndingCards = leaderboard.map(({ role, score }) => {
-    const roleEnding = determineRoleEnding(role.id as RoleId, {
-      roleScore: score,
+  // Ending riêng cho từng vai vẫn dựa trên tổng `rolePoints` của vai đó
+  const roleEndingCards = ROLES.map((role) => {
+    const roleId = role.id as RoleId;
+    const choiceScore = roleScores[roleId] ?? 0;
+    const roleEnding = determineRoleEnding(roleId, {
+      roleScore: choiceScore,
       indicators: state.indicators,
       system: systemScores,
     });
-    return { role, score, roleEnding };
+    return { role, score: choiceScore, roleEnding };
   });
+
+  const minFinalScore = Math.min(...leaderboard.map((l) => l.score));
+  const maxFinalScore = Math.max(...leaderboard.map((l) => l.score));
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -111,7 +205,7 @@ export function FinalScreen() {
               : `Vai ${winners[0].role.label} là bên \"win\" nhiều nhất qua chuỗi quyết định của nhóm. Nhưng win cho một vai chưa chắc đồng nghĩa hệ thống cũng đang ổn.`}
           </p>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            Vai thắng = tổng Điểm vai (`rolePoints`) cao nhất qua tất cả các vòng.
+            Vai thắng = điểm cuối cao nhất qua tất cả các vòng: `rolePoints` + Utility (theo trạng thái hệ thống) - Phạt cực đoan.
           </p>
         </div>
 
@@ -122,9 +216,9 @@ export function FinalScreen() {
           </h2>
           <div className="space-y-2">
             {leaderboard.map(({ role, score, players }, idx) => {
-              const maxPossible = GAME_ROUNDS.length * 2; // max 2pts per round
-              const pct = Math.max(0, ((score + maxPossible) / (maxPossible * 2)) * 100);
-              const isWinner = score === topScore;
+              const pct =
+                maxFinalScore === minFinalScore ? 100 : ((score - minFinalScore) / (maxFinalScore - minFinalScore)) * 100;
+              const isWinner = Math.abs(score - topScore) <= SCORE_EPS;
               return (
                 <div
                   key={role.id}
@@ -173,16 +267,16 @@ export function FinalScreen() {
                       className="text-lg font-extrabold font-mono"
                       style={{ color: role.color }}
                     >
-                      {score > 0 ? "+" : ""}{score}
+                      {formatFinalScore(score)}
                     </div>
-                    <div className="text-xs text-muted-foreground">điểm</div>
+                    <div className="text-xs text-muted-foreground">điểm cuối</div>
                   </div>
                 </div>
               );
             })}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Điểm vai = tổng `rolePoints` mà vai đó tích lũy qua {GAME_ROUNDS.length} vòng
+            Điểm cuối = Điểm vai (tổng `rolePoints`) + Utility theo trạng thái hệ thống cuối game - Phạt cực đoan.
           </p>
         </div>
 
@@ -316,7 +410,7 @@ export function FinalScreen() {
                   <div className="text-sm font-bold" style={{ color: role.color }}>
                     {role.icon} {role.label}
                   </div>
-                  <div className="text-xs text-muted-foreground font-mono">Điểm vai: {score > 0 ? "+" : ""}{score}</div>
+                  <div className="text-xs text-muted-foreground font-mono">Điểm vai: {formatFinalScore(score)}</div>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">{roleEnding.academicName}</div>
                 <div className="text-sm font-semibold mt-1">{roleEnding.title}</div>
