@@ -684,33 +684,6 @@ export function HomeScreen() {
         </div>
 
         <div className="w-full max-w-xs space-y-3">
-          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mini screen</div>
-                <div className="text-sm font-semibold truncate">Video lý thuyết ngắn</div>
-              </div>
-              <a
-                href="/theory.mp4"
-                className="text-xs font-semibold text-primary hover:underline shrink-0"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Mở
-              </a>
-            </div>
-            <div className="bg-black/5">
-              <video
-                className="w-full aspect-video object-cover"
-                controls
-                preload="metadata"
-                playsInline
-              >
-                <source src="/theory.mp4" type="video/mp4" />
-              </video>
-            </div>
-          </div>
-
           <Button className="w-full h-12 text-base font-semibold" onClick={() => setScreen("create")}>
             Tạo phòng mới
           </Button>
