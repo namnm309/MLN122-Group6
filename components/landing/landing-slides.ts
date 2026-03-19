@@ -82,6 +82,7 @@ export const landingSlides: LandingSlide[] = [
     openHref: "https://drive.google.com/file/d/1tIckbcONnWTjaW2KPwUeBLNG-8Jn2P-4/view?usp=sharing",
     actions: [
       { label: "Tiếp tục sang lý thuyết", href: "#tomtat", variant: "primary" },
+      { label: "Vào chơi ngay", href: "/game", variant: "secondary" },
     ],
   },
   {

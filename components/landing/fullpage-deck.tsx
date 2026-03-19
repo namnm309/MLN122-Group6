@@ -8,6 +8,7 @@ import type { LandingSlide } from "@/components/landing/landing-slides";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type FullPageDeckProps = {
   slides: LandingSlide[];
@@ -50,18 +51,23 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
     () => slides.map(() => ({ current: null as HTMLElement | null })),
     [slides]
   );
+  const isMobile = useIsMobile();
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
+    if (isMobile) return;
+
     document.body.classList.add("fullpageBody");
     document.documentElement.classList.add("fullpageHtml");
     return () => {
       document.body.classList.remove("fullpageBody");
       document.documentElement.classList.remove("fullpageHtml");
     };
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
+    if (isMobile) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         const visibleEntry = entries
@@ -84,7 +90,7 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
     });
 
     return () => observer.disconnect();
-  }, [slideRefs]);
+  }, [isMobile, slideRefs]);
 
   useEffect(() => {
     const scrollToHash = (behavior: ScrollBehavior) => {
@@ -105,6 +111,8 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
   }, [slideRefs, slides]);
 
   useEffect(() => {
+    if (isMobile) return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isEditableElement(event.target)) return;
 
@@ -125,7 +133,7 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeIndex, slideRefs, slides.length]);
+  }, [activeIndex, isMobile, slideRefs, slides.length]);
 
   return (
     <>
@@ -168,7 +176,7 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
         ))}
       </div>
 
-      <div className="fixed left-6 right-6 top-[76px] z-40 flex items-center justify-between md:hidden">
+      <div className="fixed left-6 right-6 top-[calc(76px+env(safe-area-inset-top))] z-40 flex items-center justify-between md:hidden">
         <div className="rounded-full border border-border bg-background/85 px-3 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur">
           {slides[activeIndex]?.navLabel}
         </div>

@@ -220,6 +220,26 @@
   }
 }
 
+@media (max-width: 767px), (pointer: coarse), (hover: none) {
+  .fullpageBody {
+    height: auto;
+    overflow-y: auto;
+    scroll-snap-type: none;
+  }
+
+  .fullpageHtml {
+    overflow: auto;
+  }
+
+  .fullpageSnapSection {
+    min-height: 100dvh;
+    height: auto;
+    scroll-snap-align: none;
+    scroll-snap-stop: normal;
+    overflow: visible;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal {
     opacity: 1 !important;

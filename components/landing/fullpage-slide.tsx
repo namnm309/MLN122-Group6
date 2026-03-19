@@ -40,7 +40,7 @@ export function FullPageSlide({
 }: FullPageSlideProps) {
   return (
     <section id={id} className={cn("fullpageSnapSection scroll-mt-24", className)}>
-      <div className="h-full px-6 pt-24 pb-10 flex">
+      <div className="h-full px-4 sm:px-6 pt-[calc(5.5rem+env(safe-area-inset-top))] sm:pt-24 pb-10 flex">
         <div className="max-w-6xl mx-auto w-full flex flex-col justify-between gap-8">
           <div>
             <Reveal className="flex items-center justify-between gap-4" delayMs={10}>
