@@ -702,18 +702,18 @@ export function HomeScreen() {
             aria-label="Mở hướng dẫn"
             title="Hướng dẫn"
           >
-            <span
-              className="text-sm font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
-              style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
-            >
-              HƯỚNG DẪN CHƠI !!!
-            </span>
             <img
               src={GUIDE_MOBILE_GIF_URL}
               alt="Hướng dẫn"
               className="w-28 h-28 object-contain"
               loading="eager"
             />
+            <span
+              className="text-sm font-extrabold tracking-tight leading-none uppercase drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
+              style={{ animation: "guideTextRainbow 3.2s ease-in-out infinite" }}
+            >
+              HƯỚNG DẪN CHƠI !!!
+            </span>
           </button>
         </div>
       </div>
