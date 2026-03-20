@@ -28,8 +28,8 @@ type FullPageDeckProps = {
 type QuizAiToolCard = {
   name: string;
   desc: string;
-  borderClass: string;
-  iconBg: string;
+  accentBorder: string;
+  iconFrame: string;
   iconColor: string;
   titleColor: string;
   Icon: LucideIcon;
@@ -39,28 +39,31 @@ const QUIZ_AI_SUPPORT_TOOLS: QuizAiToolCard[] = [
   {
     name: "ChatGPT",
     desc: "Soạn kịch bản, hook mở đầu và chỉnh lời dẫn — giúp video bài thuyết trình mạch lạc, dễ nghe.",
-    borderClass: "border-emerald-500/50",
-    iconBg: "bg-emerald-500/15",
-    iconColor: "text-emerald-400",
-    titleColor: "text-emerald-400",
+    accentBorder: "border-l-2 border-l-emerald-600/75 dark:border-l-emerald-400/65",
+    iconFrame:
+      "rounded-xl border border-emerald-600/35 bg-emerald-600/[0.07] dark:border-emerald-400/40 dark:bg-emerald-400/10",
+    iconColor: "text-emerald-700 dark:text-emerald-300",
+    titleColor: "text-emerald-800 dark:text-emerald-200",
     Icon: MessageSquare,
   },
   {
     name: "GitHub Copilot",
     desc: "Hỗ trợ code nhanh cho web/ghi chú kèm media, snippet và refactor trong quy trình dựng video.",
-    borderClass: "border-violet-500/50",
-    iconBg: "bg-violet-500/15",
-    iconColor: "text-violet-400",
-    titleColor: "text-violet-400",
+    accentBorder: "border-l-2 border-l-violet-600/75 dark:border-l-violet-400/65",
+    iconFrame:
+      "rounded-xl border border-violet-600/35 bg-violet-600/[0.07] dark:border-violet-400/40 dark:bg-violet-400/10",
+    iconColor: "text-violet-700 dark:text-violet-300",
+    titleColor: "text-violet-800 dark:text-violet-200",
     Icon: Github,
   },
   {
     name: "NotebookLM",
     desc: "Tổng hợp tài liệu & slide, trích ý chính và gợi ý nguồn để làm nội dung cùng voice-over.",
-    borderClass: "border-sky-500/50",
-    iconBg: "bg-sky-500/15",
-    iconColor: "text-sky-400",
-    titleColor: "text-sky-400",
+    accentBorder: "border-l-2 border-l-sky-600/75 dark:border-l-sky-400/65",
+    iconFrame:
+      "rounded-xl border border-sky-600/35 bg-sky-600/[0.07] dark:border-sky-400/40 dark:bg-sky-400/10",
+    iconColor: "text-sky-700 dark:text-sky-300",
+    titleColor: "text-sky-900 dark:text-sky-200",
     Icon: BookOpen,
   },
 ];
@@ -501,46 +504,46 @@ export function FullPageDeck({ slides }: FullPageDeckProps) {
                       </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-700/70 bg-[#0b1222] p-6 sm:p-8 text-slate-100 shadow-lg">
-                      <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-3">
+                    <div className="rounded-3xl border border-border bg-card/70 p-5 sm:p-6">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
                         <span
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-600/70 bg-slate-800/90 text-slate-300"
+                          className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background/80 text-primary sm:mx-0"
                           aria-hidden
                         >
-                          <Sparkles className="h-4 w-4" />
+                          <Sparkles className="h-5 w-5" />
                         </span>
-                        <div className="text-center sm:text-left">
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                        <div className="min-w-0 flex-1 text-center sm:text-left">
+                          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             Công cụ hỗ trợ
                           </div>
-                          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                             Các công cụ AI nhóm dùng khi làm video cho bài thuyết trình
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
                         {QUIZ_AI_SUPPORT_TOOLS.map((tool) => (
                           <div
                             key={tool.name}
                             className={cn(
-                              "flex gap-3 rounded-xl border bg-slate-900/55 px-4 py-3.5 backdrop-blur-sm",
-                              tool.borderClass
+                              "flex gap-3 rounded-2xl border border-border bg-background/30 p-4",
+                              tool.accentBorder
                             )}
                           >
                             <div
                               className={cn(
-                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-                                tool.iconBg
+                                "flex h-10 w-10 shrink-0 items-center justify-center",
+                                tool.iconFrame
                               )}
                             >
                               <tool.Icon className={cn("h-5 w-5", tool.iconColor)} aria-hidden />
                             </div>
                             <div className="min-w-0">
-                              <div className={cn("text-sm font-bold tracking-tight", tool.titleColor)}>
+                              <div className={cn("text-sm font-semibold tracking-tight", tool.titleColor)}>
                                 {tool.name}
                               </div>
-                              <p className="mt-1 text-xs leading-relaxed text-slate-400">{tool.desc}</p>
+                              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{tool.desc}</p>
                             </div>
                           </div>
                         ))}
